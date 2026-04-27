@@ -1,7 +1,7 @@
 {
-  "name": "tradepostmortem",
-  "version": "1.0.0",
-  "description": "Solana trade autopsy tool — Colosseum Frontier Hackathon",
+  "name": "slip-app",
+  "version": "2.0.0",
+  "description": "SLIP — Onchain Trade Intelligence · Verdict · Mirror · Payslip · Colosseum Frontier Hackathon",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@solana/web3.js": "^1.98.4",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
