@@ -1,87 +1,80 @@
 import Link from 'next/link';
-import WalletInput from '@/components/WalletInput';
+import Nav from '@/components/Nav';
 
 export default function LandingPage() {
   return (
     <>
-      {/* ── NAV ── */}
-      <nav className="nav">
-        <Link href="/" className="nav-logo">
-          <div className="nav-logo-dot" />
-          TradePostmortem
-        </Link>
-        <div className="nav-right">
-          <span className="nav-badge">SOLANA</span>
-          <span>Beta</span>
-        </div>
-      </nav>
+      <Nav />
 
-      {/* ── HERO ── */}
-      <main
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          padding: '80px 24px 60px',
-          position: 'relative',
-        }}
-      >
-        <p className="hero-eyebrow">Solana Trade Autopsy Tool</p>
+      <main className="slip-landing">
+        <p className="land-tag">Onchain Trade Intelligence</p>
 
-        <h1 className="hero-title">
-          You <span className="strike">lost</span>
-          <br />
-          the trade.
-        </h1>
+        <h1 className="land-title">SLIP</h1>
 
-        <p className="hero-sub">
-          Paste your wallet. We reconstruct every bad swap — the entry percentile,
-          the peak you missed, and the exact SOL you left on the table.
+        <p className="land-sub">
+          Don&apos;t get in wrong.<br />
+          Know who&apos;s winning while you&apos;re in.<br />
+          Know what it cost you after.
         </p>
 
-        {/* ── WALLET INPUT ── */}
-        <WalletInput />
+        {/* ── FEATURE GRID ── */}
+        <div className="feature-grid">
 
-        {/* ── STATS ── */}
-        <div className="stats-row">
-          <div className="stat-cell">
-            <div className="stat-num">18.4K</div>
-            <div className="stat-label">Wallets Autopsied</div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-num">142K</div>
-            <div className="stat-label">Trades Analyzed</div>
-          </div>
-          <div className="stat-cell">
-            <div className="stat-num">94K</div>
-            <div className="stat-label">SOL Left on Table</div>
-          </div>
+          <Link href="/verdict" className="feat-card card-verdict">
+            <span className="feat-arrow">→</span>
+            <div className="feat-num">01 · VERDICT</div>
+            <div className="feat-name">Before<br />the trade</div>
+            <div className="feat-desc">
+              Full token safety and market structure scan. Mint authority, LP lock,
+              transfer hooks, deployer history, holder concentration, timing position.
+              One score. One verdict.
+            </div>
+            <span className="feat-when">Pre-Trade</span>
+          </Link>
+
+          <Link href="/mirror" className="feat-card card-mirror">
+            <span className="feat-arrow">→</span>
+            <div className="feat-num">02 · MIRROR</div>
+            <div className="feat-name">During<br />the trade</div>
+            <div className="feat-desc">
+              Every wallet winning on your token right now, ranked by SOL gained.
+              See who entered earlier, with more size, and why they&apos;re up while
+              you&apos;re not. The gap, explained.
+            </div>
+            <span className="feat-when">Live Position</span>
+          </Link>
+
+          <Link href="/payslip" className="feat-card card-payslip">
+            <span className="feat-arrow">→</span>
+            <div className="feat-num">03 · PAYSLIP</div>
+            <div className="feat-name">After<br />the trade</div>
+            <div className="feat-desc">
+              Your full trade autopsy. Entry percentile, peak missed, SOL left on table.
+              Who won the most on each token. Your recurring mistakes. Your trading
+              grade, broken down.
+            </div>
+            <span className="feat-when">Post-Trade</span>
+          </Link>
+
         </div>
 
-        {/* ── HOW IT WORKS ── */}
-        <div className="how-row">
-          <div className="how-card">
-            <div className="how-num">01</div>
-            <div className="how-title">Fetch Swaps</div>
-            <div className="how-text">
-              We pull your last 100 swap transactions via Helius Enhanced API — no wallet connection needed.
-            </div>
+        {/* ── STATS ── */}
+        <div className="land-stats">
+          <div className="land-stat">
+            <div className="land-stat-n">24.1K</div>
+            <div className="land-stat-l">Wallets Analyzed</div>
           </div>
-          <div className="how-card">
-            <div className="how-num">02</div>
-            <div className="how-title">Price at Time</div>
-            <div className="how-text">
-              Birdeye Historical Price API prices every entry and exit at the exact block timestamp.
-            </div>
+          <div className="land-stat">
+            <div className="land-stat-n">218K</div>
+            <div className="land-stat-l">Trades Autopsied</div>
           </div>
-          <div className="how-card">
-            <div className="how-num">03</div>
-            <div className="how-title">Diagnose</div>
-            <div className="how-text">
-              We detect Bought The Top, Paper Hands, Diamond Hands Rekt, and more — ranked by damage score.
-            </div>
+          <div className="land-stat">
+            <div className="land-stat-n">141K</div>
+            <div className="land-stat-l">SOL Left on Table</div>
+          </div>
+          <div className="land-stat">
+            <div className="land-stat-n">9.4K</div>
+            <div className="land-stat-l">Tokens Scanned</div>
           </div>
         </div>
       </main>
