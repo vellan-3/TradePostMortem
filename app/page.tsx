@@ -9,7 +9,9 @@ export default function LandingPage() {
       <main className="slip-landing">
         <p className="land-tag">Onchain Trade Intelligence</p>
 
-        <h1 className="land-title">SLIP</h1>
+        <h1 className="land-title">
+          SLIP
+        </h1>
 
         <p className="land-sub">
           Don&apos;t get in wrong.<br />

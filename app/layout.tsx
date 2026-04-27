@@ -33,6 +33,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <div className="grid-bg" />
         {children}
       </body>
     </html>
