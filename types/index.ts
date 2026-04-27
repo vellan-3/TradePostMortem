@@ -57,3 +57,23 @@ export interface WalletSummary {
   overallGrade: 'F' | 'D' | 'C' | 'B' | 'A';
   avgEntryPercentile: number | null;
 }
+
+// ─── Pattern tax (recurring mistake analysis) ─────────────────────────────
+export interface PatternTax {
+  mostCommonMistake: DiagnosisCode | 'UNKNOWN';
+  timesRepeated: number;
+  totalCostSOL: number;
+  avgLossHoldTimeHours: number;
+  avgWinHoldTimeHours: number;
+  avgWinnerEntryAdvantageMinutes: number; // winners entered X min earlier than you
+}
+
+// ─── Detailed trading grade ────────────────────────────────────────────────
+export interface TradingGrade {
+  overall: 'A' | 'B' | 'C' | 'D' | 'F';
+  overallScore: number;    // 0-100
+  entryDiscipline: number; // 0-100: are you buying top of candles?
+  exitDiscipline: number;  // 0-100: are you selling bottoms or early?
+  sizeManagement: number;  // 0-100: are you oversizing losers?
+  tokenSelection: number;  // 0-100: are you picking high-verdict tokens?
+}

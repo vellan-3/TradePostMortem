@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWalletSwaps } from '@/lib/helius';
-import { analyzeTrade, computeWalletGrade } from '@/lib/analyzer';
-import { ParsedSwap, TradeAnalysis, WalletSummary } from '@/types';
+import { analyzeTrade, computeWalletGrade, computePatternTax, computeGrade } from '@/lib/analyzer';
+import { ParsedSwap, TradeAnalysis, WalletSummary, PatternTax, TradingGrade } from '@/types';
 
 export const maxDuration = 60; // Vercel: allow up to 60s for analysis
 
@@ -78,8 +78,10 @@ export async function GET(req: NextRequest) {
 
     // 5. Build summary stats
     const summary = buildSummary(wallet, top10);
+    const patternTax: PatternTax = computePatternTax(top10);
+    const grade: TradingGrade = computeGrade(top10);
 
-    return NextResponse.json({ analyses: top10, summary });
+    return NextResponse.json({ analyses: top10, summary, patternTax, grade });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     console.error('[/api/analyze] Error:', msg);
