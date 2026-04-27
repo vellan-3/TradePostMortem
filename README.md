@@ -2,7 +2,7 @@
 
 > *"You lost the trade. We show you exactly why, when, and how much it cost you."*
 
-**TradePostmortem** is a Solana wallet trade analyzer built for the [Colosseum Frontier Hackathon](https://www.colosseum.org/frontier).
+**TradePostmortem** is a Solana wallet trade analyzer
 
 Paste any Solana wallet — we pull swap history via Helius, price each entry/exit with Birdeye, and output a ranked breakdown of your worst trades with specific, actionable diagnoses.
 
