@@ -1,0 +1,2407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLIP — Onchain Trade Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Azeret+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:#06060a}
+::-webkit-scrollbar-thumb{background:#222230;border-radius:2px}
+
+/* ─── TOKENS ─── */
+:root{
+  --bg:       #06060a;
+  --surface:  #0c0c14;
+  --s2:       #11111c;
+  --s3:       #171724;
+  --border:   #1c1c2e;
+  --border2:  #252538;
+  --text:     #e8e8f2;
+  --sub:      #9090b0;
+  --muted:    #4a4a68;
+  --dim:      #252535;
+
+  --red:      #ff2d2d;
+  --red2:     #ff5555;
+  --red-bg:   rgba(255,45,45,.08);
+  --red-bd:   rgba(255,45,45,.2);
+
+  --amber:    #f59e0b;
+  --amber-bg: rgba(245,158,11,.08);
+  --amber-bd: rgba(245,158,11,.2);
+
+  --green:    #10b981;
+  --green2:   #34d399;
+  --green-bg: rgba(16,185,129,.08);
+  --green-bd: rgba(16,185,129,.2);
+
+  --blue:     #3b82f6;
+  --blue-bg:  rgba(59,130,246,.08);
+  --blue-bd:  rgba(59,130,246,.2);
+
+  --purple:   #8b5cf6;
+  --purple-bg:rgba(139,92,246,.08);
+  --purple-bd:rgba(139,92,246,.2);
+
+  --verdict-c: var(--red);
+  --mirror-c:  var(--blue);
+  --payslip-c: var(--purple);
+
+  --ff-display: 'Space Grotesk', sans-serif;
+  --ff-mono:    'Azeret Mono', monospace;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--ff-mono);
+  font-size:13px;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ─── SCANLINE OVERLAY ─── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,.03) 2px,
+    rgba(0,0,0,.03) 4px
+  );
+  pointer-events:none;
+  z-index:9998;
+}
+
+/* ─── NOISE ─── */
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* ─── UTILS ─── */
+.mono{font-family:var(--ff-mono)}
+.display{font-family:var(--ff-display)}
+
+@keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.65)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slide-in{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+
+/* ─── NAV ─── */
+nav{
+  position:fixed;inset:0 0 auto 0;
+  height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  background:rgba(6,6,10,.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  z-index:200;
+}
+
+.nav-logo{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:18px;
+  letter-spacing:-.5px;
+  color:var(--text);
+  display:flex;align-items:center;gap:10px;
+  cursor:pointer;
+}
+
+.nav-logo-mark{
+  width:24px;height:24px;
+  border:1.5px solid var(--red);
+  border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+
+.nav-logo-mark::after{
+  content:'';
+  position:absolute;
+  width:7px;height:7px;
+  background:var(--red);
+  border-radius:50%;
+  animation:pulse 2.4s ease-in-out infinite;
+}
+
+/* Connected wallet pill in nav */
+.nav-wallet{
+  display:none;
+  align-items:center;gap:8px;
+  background:var(--s2);
+  border:1px solid var(--border2);
+  border-radius:6px;
+  padding:6px 14px;
+  font-family:var(--ff-mono);
+  font-size:11px;
+  color:var(--sub);
+  cursor:pointer;
+  transition:border-color .15s;
+}
+
+.nav-wallet:hover{border-color:var(--border2)}
+.nav-wallet.visible{display:flex}
+
+.nav-wallet-dot{
+  width:6px;height:6px;
+  background:var(--green);
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+.nav-right{display:flex;align-items:center;gap:12px}
+
+.nav-badge{
+  font-family:var(--ff-mono);
+  font-size:10px;
+  letter-spacing:1px;
+  color:var(--muted);
+  border:1px solid var(--border);
+  padding:3px 10px;
+  border-radius:20px;
+}
+
+/* ─── SCREENS ─── */
+.screen{display:none;min-height:100vh;padding-top:52px}
+.screen.active{display:block}
+
+/* ══════════════════════════════════════
+   SCREEN 0 — CONNECT WALLET (ENTRY)
+══════════════════════════════════════ */
+#s-connect{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  padding:80px 24px;
+  position:relative;
+  overflow:hidden;
+}
+
+/* ambient glow */
+#s-connect::before{
+  content:'';
+  position:absolute;
+  top:30%;left:50%;
+  transform:translate(-50%,-50%);
+  width:600px;height:600px;
+  background:radial-gradient(circle, rgba(255,45,45,.06) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+.connect-eyebrow{
+  font-family:var(--ff-mono);
+  font-size:10px;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:32px;
+  animation:fu .5s ease both;
+}
+
+.connect-title{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:clamp(64px,10vw,112px);
+  letter-spacing:-4px;
+  line-height:.88;
+  text-align:center;
+  color:var(--text);
+  animation:fu .5s .05s ease both;
+}
+
+.connect-title .red{color:var(--red)}
+
+.connect-sub{
+  margin-top:24px;
+  font-family:var(--ff-mono);
+  font-size:13px;
+  color:var(--sub);
+  text-align:center;
+  max-width:380px;
+  line-height:1.8;
+  animation:fu .5s .1s ease both;
+}
+
+/* connect box */
+.connect-box{
+  margin-top:60px;
+  width:100%;
+  max-width:460px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:32px;
+  animation:fu .5s .15s ease both;
+}
+
+.connect-box-label{
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:20px;
+}
+
+/* wallet address manual input */
+.connect-input-wrap{
+  display:flex;
+  border:1px solid var(--border2);
+  border-radius:6px;
+  overflow:hidden;
+  margin-bottom:16px;
+  transition:border-color .2s;
+}
+
+.connect-input-wrap:focus-within{
+  border-color:var(--red);
+  box-shadow:0 0 0 3px var(--red-bg);
+}
+
+.connect-input{
+  flex:1;
+  background:transparent;
+  border:none;outline:none;
+  padding:14px 16px;
+  font-family:var(--ff-mono);
+  font-size:12px;
+  color:var(--text);
+  letter-spacing:.5px;
+}
+
+.connect-input::placeholder{color:var(--dim)}
+
+.btn-connect{
+  padding:14px 22px;
+  background:var(--red);
+  border:none;
+  font-family:var(--ff-display);
+  font-weight:600;
+  font-size:13px;
+  color:#fff;
+  cursor:pointer;
+  transition:background .15s,transform .1s;
+  white-space:nowrap;
+}
+
+.btn-connect:hover{background:#e01f1f}
+.btn-connect:active{transform:scale(.98)}
+
+.connect-divider{
+  display:flex;align-items:center;gap:12px;
+  margin:20px 0;
+  font-size:10px;
+  color:var(--muted);
+  letter-spacing:1px;
+}
+
+.connect-divider::before,.connect-divider::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+
+/* wallet button */
+.btn-wallet{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 18px;
+  background:var(--s2);
+  border:1px solid var(--border2);
+  border-radius:6px;
+  cursor:pointer;
+  transition:border-color .15s,background .15s;
+  font-family:var(--ff-mono);
+  color:var(--text);
+  font-size:13px;
+  margin-bottom:10px;
+}
+
+.btn-wallet:hover{border-color:var(--border2);background:var(--s3)}
+
+.btn-wallet-icon{
+  width:32px;height:32px;
+  border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+  flex-shrink:0;
+}
+
+.btn-wallet-name{flex:1;text-align:left;font-size:13px}
+.btn-wallet-arrow{color:var(--muted);font-size:16px}
+
+/* demo chips */
+.demo-chips{
+  margin-top:24px;
+  display:flex;flex-wrap:wrap;gap:8px;
+  animation:fu .5s .2s ease both;
+}
+
+.demo-label{
+  font-size:10px;color:var(--muted);
+  letter-spacing:1px;
+  display:flex;align-items:center;
+  width:100%;margin-bottom:4px;
+}
+
+.demo-chip{
+  font-size:11px;
+  font-family:var(--ff-mono);
+  color:var(--muted);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:5px 12px;
+  cursor:pointer;
+  transition:color .15s,border-color .15s,background .15s;
+}
+
+.demo-chip:hover{color:var(--text);border-color:var(--border2);background:var(--s2)}
+
+/* what you get strip */
+.connect-value-strip{
+  margin-top:56px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:2px;
+  width:100%;
+  max-width:660px;
+  animation:fu .5s .25s ease both;
+}
+
+.value-cell{
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:20px 22px;
+  text-align:center;
+}
+
+.value-cell:first-child{border-radius:6px 0 0 6px}
+.value-cell:last-child{border-radius:0 6px 6px 0}
+
+.value-icon{font-size:20px;margin-bottom:10px}
+
+.value-title{
+  font-family:var(--ff-display);
+  font-weight:600;
+  font-size:13px;
+  color:var(--text);
+  margin-bottom:6px;
+}
+
+.value-desc{font-size:11px;color:var(--sub);line-height:1.6}
+
+/* ══════════════════════════════════════
+   SCREEN 1 — LOADING (auto-analysis)
+══════════════════════════════════════ */
+#s-loading{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  gap:0;
+  padding:24px;
+}
+
+.loading-greeting{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:28px;
+  letter-spacing:-.5px;
+  margin-bottom:8px;
+  text-align:center;
+  animation:fi .4s ease both;
+}
+
+.loading-wallet-addr{
+  font-family:var(--ff-mono);
+  font-size:12px;
+  color:var(--sub);
+  margin-bottom:48px;
+  animation:fi .4s .05s ease both;
+}
+
+.loading-panel{
+  width:100%;
+  max-width:340px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  overflow:hidden;
+  animation:fi .4s .1s ease both;
+}
+
+.loading-panel-header{
+  padding:14px 20px;
+  border-bottom:1px solid var(--border);
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--muted);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.loading-step{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 20px;
+  border-bottom:1px solid var(--border);
+  opacity:.25;
+  transition:opacity .3s;
+}
+
+.loading-step:last-child{border-bottom:none}
+.loading-step.active{opacity:1}
+.loading-step.done{opacity:.45}
+
+.ls-icon{
+  width:22px;height:22px;
+  border-radius:50%;
+  border:1.5px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;
+  flex-shrink:0;
+  transition:all .3s;
+}
+
+.loading-step.active .ls-icon{
+  border-color:var(--red);
+  animation:spin 1.2s linear infinite;
+}
+
+.loading-step.done .ls-icon{
+  background:var(--green);
+  border-color:var(--green);
+  color:#000;
+  animation:none;
+  font-size:11px;
+}
+
+.ls-text{font-size:12px;color:var(--text)}
+.ls-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+.loading-bar-wrap{
+  margin-top:28px;
+  width:100%;max-width:340px;
+  height:2px;
+  background:var(--border);
+  border-radius:1px;
+  overflow:hidden;
+  animation:fi .4s .15s ease both;
+}
+
+.loading-bar{
+  height:100%;
+  background:linear-gradient(90deg,var(--red),#ff7b7b);
+  width:0%;
+  transition:width .6s ease;
+  border-radius:1px;
+}
+
+/* ══════════════════════════════════════
+   SCREEN 2 — PAYSLIP RESULTS
+══════════════════════════════════════ */
+#s-payslip{
+  max-width:960px;
+  margin:0 auto;
+  padding:52px 24px 120px;
+}
+
+/* ─── PERSONAL HEADER ─── */
+.payslip-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:48px;
+  animation:fu .4s ease both;
+}
+
+.ph-left{}
+
+.ph-greeting{
+  font-family:var(--ff-mono);
+  font-size:10px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.ph-greeting::before{
+  content:'';
+  width:6px;height:6px;
+  background:var(--green);
+  border-radius:50%;
+}
+
+.ph-title{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:32px;
+  letter-spacing:-1px;
+  line-height:1;
+  margin-bottom:6px;
+}
+
+.ph-wallet{
+  font-family:var(--ff-mono);
+  font-size:11px;
+  color:var(--sub);
+}
+
+.ph-right{
+  text-align:right;
+}
+
+.ph-period{
+  font-size:10px;
+  letter-spacing:1px;
+  color:var(--muted);
+  margin-bottom:8px;
+  text-transform:uppercase;
+}
+
+.ph-new-analysis{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 16px;
+  background:transparent;
+  border:1px solid var(--border2);
+  color:var(--sub);
+  font-family:var(--ff-mono);
+  font-size:11px;
+  border-radius:4px;
+  cursor:pointer;
+  transition:all .15s;
+}
+
+.ph-new-analysis:hover{color:var(--text);border-color:var(--border2);background:var(--s2)}
+
+/* ─── GRADE + SUMMARY ROW ─── */
+.grade-summary-row{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:4px;
+  margin-bottom:4px;
+  animation:fu .4s .05s ease both;
+}
+
+/* big grade card */
+.grade-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px 0 0 6px;
+  padding:28px 36px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-width:160px;
+  position:relative;
+  overflow:hidden;
+}
+
+.grade-card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 50%, var(--grade-glow, rgba(255,45,45,.06)), transparent 70%);
+}
+
+.grade-letter{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:72px;
+  letter-spacing:-3px;
+  line-height:1;
+  position:relative;
+  z-index:1;
+}
+
+.grade-score{
+  font-family:var(--ff-mono);
+  font-size:11px;
+  color:var(--sub);
+  margin-top:4px;
+  position:relative;z-index:1;
+}
+
+.grade-label{
+  font-size:9px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-top:8px;
+  position:relative;z-index:1;
+}
+
+/* grade sub-scores */
+.grade-breakdown{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:2px;
+}
+
+.gb-cell{
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:18px 20px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+
+.gb-cell:last-child{border-radius:0 6px 6px 0}
+
+.gb-label{
+  font-size:9px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:12px;
+}
+
+.gb-letter{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:32px;
+  letter-spacing:-1px;
+  line-height:1;
+}
+
+.gb-score{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* grade colors */
+.grade-a{color:var(--green)}.grade-b{color:#60a5fa}.grade-c{color:var(--amber)}.grade-d{color:#f97316}.grade-f{color:var(--red)}
+
+/* ─── KEY STATS ─── */
+.key-stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:2px;
+  margin-bottom:4px;
+  animation:fu .4s .08s ease both;
+}
+
+.ks-cell{
+  background:var(--surface);
+  border:1px solid var(--border);
+  padding:16px 18px;
+}
+
+.ks-label{
+  font-size:9px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+
+.ks-val{
+  font-family:var(--ff-display);
+  font-weight:600;
+  font-size:20px;
+  letter-spacing:-.5px;
+}
+
+.ks-sub{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* ─── PATTERN TAX BANNER ─── */
+.pattern-banner{
+  background:var(--red-bg);
+  border:1px solid var(--red-bd);
+  border-radius:4px;
+  padding:16px 20px;
+  margin-bottom:4px;
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  animation:fu .4s .1s ease both;
+}
+
+.pb-icon{
+  width:28px;height:28px;
+  border-radius:50%;
+  background:var(--red-bg);
+  border:1px solid var(--red-bd);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;
+  flex-shrink:0;
+  margin-top:1px;
+  color:var(--red);
+}
+
+.pb-title{
+  font-family:var(--ff-display);
+  font-weight:600;
+  font-size:14px;
+  color:var(--red2);
+  margin-bottom:5px;
+}
+
+.pb-text{
+  font-size:12px;
+  color:rgba(255,85,85,.7);
+  line-height:1.75;
+}
+
+.pb-text b{color:var(--red2)}
+
+/* ─── SECTION LABEL ─── */
+.section-label{
+  font-size:9px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:32px 0 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.section-label::after{
+  content:'';flex:1;height:1px;background:var(--border);
+}
+
+/* ─── SORT ROW ─── */
+.sort-row{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  margin-bottom:4px;
+}
+
+.sort-btn{
+  padding:7px 16px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--muted);
+  font-family:var(--ff-mono);
+  font-size:10px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  cursor:pointer;
+  border-radius:0;
+  transition:all .15s;
+}
+
+.sort-btn:first-child{border-radius:4px 0 0 4px}
+.sort-btn:last-child{border-radius:0 4px 4px 0}
+.sort-btn.active{background:var(--s2);color:var(--text);border-color:var(--border2)}
+
+/* ─── TRADE CARD ─── */
+.trade-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:4px;
+  margin-bottom:3px;
+  overflow:hidden;
+  cursor:pointer;
+  transition:border-color .2s;
+}
+
+.trade-card:hover{border-color:var(--border2)}
+.trade-card.open{border-color:var(--border2)}
+
+/* left accent bar based on diagnosis */
+.trade-card.diag-bought   {border-left:3px solid var(--red)}
+.trade-card.diag-sold     {border-left:3px solid var(--amber)}
+.trade-card.diag-paper    {border-left:3px solid var(--amber)}
+.trade-card.diag-diamond  {border-left:3px solid var(--red)}
+.trade-card.diag-good     {border-left:3px solid var(--green)}
+.trade-card.diag-unknown  {border-left:3px solid var(--border2)}
+
+/* ─── CARD TOP ROW ─── */
+.card-top{
+  display:grid;
+  grid-template-columns:36px 1fr 220px 140px;
+  align-items:center;
+  gap:0;
+  padding:14px 20px 14px 16px;
+}
+
+.card-rank{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:16px;
+  color:var(--muted);
+  text-align:center;
+}
+
+.card-rank.r1{color:var(--red)}
+.card-rank.r2{color:#f97316}
+.card-rank.r3{color:var(--amber)}
+
+.card-main{}
+
+.card-token-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:4px;
+}
+
+.card-symbol{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:17px;
+  letter-spacing:-.3px;
+}
+
+.diag-tag{
+  font-family:var(--ff-mono);
+  font-size:9px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:2px 9px;
+  border-radius:20px;
+}
+
+.tag-bought {background:var(--red-bg);  color:var(--red);   border:1px solid var(--red-bd)}
+.tag-sold   {background:var(--amber-bg);color:var(--amber); border:1px solid var(--amber-bd)}
+.tag-paper  {background:var(--amber-bg);color:var(--amber); border:1px solid var(--amber-bd)}
+.tag-diamond{background:var(--red-bg);  color:var(--red);   border:1px solid var(--red-bd)}
+.tag-good   {background:var(--green-bg);color:var(--green); border:1px solid var(--green-bd)}
+.tag-unknown{background:var(--s2);      color:var(--muted); border:1px solid var(--border)}
+
+.card-date{font-size:10px;color:var(--muted)}
+
+/* winner mini */
+.card-winner-mini{
+  font-size:11px;
+  color:var(--sub);
+  padding:0 16px;
+  line-height:1.6;
+  border-left:1px solid var(--border);
+  border-right:1px solid var(--border);
+  margin:0 4px;
+}
+
+.cwm-top{color:var(--green);font-family:var(--ff-display);font-weight:600;font-size:13px}
+.cwm-label{font-size:10px;color:var(--muted)}
+
+/* pnl */
+.card-pnl{text-align:right}
+
+.pnl-val{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:-.5px;
+  line-height:1;
+}
+
+.pnl-label{font-size:9px;color:var(--muted);margin-top:4px;letter-spacing:.5px}
+
+/* ─── CARD EXPANDED DETAIL ─── */
+.card-detail{
+  display:none;
+  border-top:1px solid var(--border);
+}
+
+.trade-card.open .card-detail{display:block}
+
+.detail-split{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  background:var(--border);
+}
+
+.detail-half{
+  background:var(--s2);
+  padding:24px;
+}
+
+.detail-half-title{
+  font-size:9px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  margin-bottom:18px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.dht-you{color:var(--purple)}
+.dht-winner{color:var(--green)}
+
+.detail-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  padding:7px 0;
+  border-bottom:1px solid var(--border);
+  font-size:11px;
+  gap:16px;
+}
+
+.detail-row:last-child{border-bottom:none}
+
+.dr-key{color:var(--muted);flex-shrink:0}
+
+.dr-val{
+  font-family:var(--ff-display);
+  font-weight:600;
+  font-size:13px;
+  text-align:right;
+}
+
+.dr-tag{
+  font-family:var(--ff-mono);
+  font-size:8px;
+  letter-spacing:1px;
+  padding:1px 6px;
+  border-radius:20px;
+  margin-left:6px;
+  vertical-align:middle;
+}
+
+.tag-estimated{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.tag-unavailable{background:var(--s3);color:var(--muted);border:1px solid var(--border)}
+
+/* ─── DIAGNOSIS BLOCK ─── */
+.diagnosis-block{
+  padding:18px 24px;
+  font-size:12px;
+  line-height:1.8;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  color:var(--sub);
+  border-left:3px solid transparent;
+}
+
+.db-bought{border-left-color:var(--red)}
+.db-sold,.db-paper{border-left-color:var(--amber)}
+.db-good{border-left-color:var(--green)}
+
+.diagnosis-block b{color:var(--text);font-family:var(--ff-display);font-weight:600}
+
+/* ─── CARD ACTIONS ─── */
+.card-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:14px 24px;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+}
+
+.action-btn{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 16px;
+  border-radius:4px;
+  font-family:var(--ff-mono);
+  font-size:11px;
+  cursor:pointer;
+  transition:all .15s;
+  border:1px solid var(--border2);
+  background:transparent;
+  color:var(--sub);
+  letter-spacing:.3px;
+}
+
+.action-btn:hover{color:var(--text);border-color:var(--border2);background:var(--s2)}
+
+/* contextual action buttons — these launch VERDICT/MIRROR */
+.action-btn.verdict-action{
+  border-color:var(--red-bd);
+  color:var(--red);
+}
+
+.action-btn.verdict-action:hover{
+  background:var(--red-bg);
+  border-color:var(--red);
+}
+
+.action-btn.mirror-action{
+  border-color:var(--blue-bd);
+  color:var(--blue);
+}
+
+.action-btn.mirror-action:hover{
+  background:var(--blue-bg);
+  border-color:var(--blue);
+}
+
+.action-btn.share-action{
+  margin-left:auto;
+  border-color:var(--border2);
+  color:var(--sub);
+}
+
+.action-btn.x-action{
+  background:#000;
+  border-color:#333;
+  color:#fff;
+}
+
+.action-btn.x-action:hover{background:#111}
+
+/* ══════════════════════════════════════
+   VERDICT PANEL (slides over results)
+══════════════════════════════════════ */
+.side-panel{
+  position:fixed;
+  inset:0 0 0 auto;
+  width:min(520px,100vw);
+  background:var(--s2);
+  border-left:1px solid var(--border2);
+  z-index:300;
+  display:flex;
+  flex-direction:column;
+  transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.16,1,.3,1);
+  overflow-y:auto;
+}
+
+.side-panel.open{transform:translateX(0)}
+
+.panel-backdrop{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.6);
+  z-index:299;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s;
+  backdrop-filter:blur(4px);
+}
+
+.panel-backdrop.open{opacity:1;pointer-events:all}
+
+.panel-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:20px 24px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;
+  background:var(--s2);
+  z-index:1;
+}
+
+.panel-header-left{}
+
+.panel-close{
+  width:32px;height:32px;
+  background:var(--s3);
+  border:1px solid var(--border2);
+  border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  color:var(--sub);
+  font-size:16px;
+  transition:all .15s;
+}
+
+.panel-close:hover{color:var(--text);border-color:var(--border2)}
+
+.panel-type-label{
+  font-size:9px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  margin-bottom:4px;
+}
+
+.panel-title{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:18px;
+  letter-spacing:-.3px;
+}
+
+.panel-body{padding:24px}
+
+/* ─── VERDICT SCORE ─── */
+.verdict-hero{
+  display:flex;
+  align-items:center;
+  gap:24px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:24px;
+  margin-bottom:16px;
+}
+
+.vscore-ring{position:relative;width:80px;height:80px;flex-shrink:0}
+
+.vscore-ring svg{transform:rotate(-90deg)}
+
+.vscore-num{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:-1px;
+}
+
+.vscore-sublabel{font-size:8px;color:var(--muted);letter-spacing:1px;margin-top:-2px}
+
+.verdict-info{}
+
+.verdict-badge{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:-.5px;
+  margin-bottom:6px;
+}
+
+.vb-clean{color:var(--green)}
+.vb-caution{color:var(--amber)}
+.vb-flagged{color:#f97316}
+.vb-trap{color:var(--red)}
+
+.verdict-token{font-size:11px;color:var(--muted);margin-bottom:8px}
+.verdict-summary{font-size:12px;color:var(--sub);line-height:1.7}
+
+/* ─── VERDICT CHECKS ─── */
+.check-section{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+  overflow:hidden;
+  margin-bottom:12px;
+}
+
+.check-section-header{
+  padding:12px 16px;
+  font-size:9px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--muted);
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+}
+
+.check-row{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:12px 16px;
+  border-bottom:1px solid var(--border);
+}
+
+.check-row:last-child{border-bottom:none}
+
+.check-icon{
+  width:18px;height:18px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;
+  flex-shrink:0;
+  margin-top:1px;
+}
+
+.ci-pass{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.ci-warn{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.ci-fail{background:var(--red-bg);  color:var(--red);  border:1px solid var(--red-bd)}
+
+.check-content{flex:1}
+.check-name{font-family:var(--ff-display);font-weight:600;font-size:12px;margin-bottom:3px}
+.check-detail{font-size:10px;color:var(--sub);line-height:1.6}
+
+.check-sev{
+  font-size:8px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:2px 8px;
+  border-radius:20px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+
+.sev-critical{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.sev-warning{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.sev-pass{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+
+/* ─── MIRROR PANEL ─── */
+.mirror-panel-token{
+  font-size:10px;
+  letter-spacing:1px;
+  color:var(--muted);
+  margin-bottom:20px;
+  padding:12px 16px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+}
+
+.mirror-panel-token b{color:var(--text);font-family:var(--ff-display);font-weight:600}
+
+.lb-table{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+  overflow:hidden;
+  margin-bottom:12px;
+}
+
+.lb-head{
+  display:grid;
+  grid-template-columns:28px 1fr 80px 60px;
+  gap:10px;
+  padding:10px 14px;
+  font-size:8px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--muted);
+  border-bottom:1px solid var(--border);
+}
+
+.lb-row{
+  display:grid;
+  grid-template-columns:28px 1fr 80px 60px;
+  gap:10px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  align-items:center;
+  cursor:pointer;
+  transition:background .15s;
+}
+
+.lb-row:last-child{border-bottom:none}
+.lb-row:hover{background:var(--s3)}
+.lb-row.you-row{border-left:2px solid var(--blue)}
+.lb-row.top-row{border-left:2px solid var(--green)}
+
+.lb-rank-num{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:14px;
+  color:var(--muted);
+  text-align:center;
+}
+
+.lb-rank-num.rk1{color:#fbbf24}
+.lb-rank-num.rk2{color:#94a3b8}
+.lb-rank-num.rk3{color:#b45309}
+
+.lb-wallet-addr{font-size:11px;color:var(--text);margin-bottom:2px}
+.lb-wallet-sub{font-size:9px;color:var(--muted)}
+
+.lb-pnl-val{
+  font-family:var(--ff-display);
+  font-weight:600;
+  font-size:13px;
+  color:var(--green);
+}
+
+.lb-pnl-val.neg{color:var(--red)}
+.lb-hold-time{font-size:10px;color:var(--muted)}
+
+.wallet-tag-sm{
+  font-size:8px;
+  padding:1px 5px;
+  border-radius:20px;
+  margin-left:6px;
+}
+
+.wt-smart{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.wt-kol{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-bd)}
+.wt-bot{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.wt-you{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-bd)}
+
+/* pattern insights */
+.pattern-insights{
+  background:var(--surface);
+  border:1px solid var(--blue-bd);
+  border-radius:6px;
+  padding:18px;
+  margin-top:12px;
+}
+
+.pi-title{
+  font-family:var(--ff-display);
+  font-weight:600;
+  font-size:12px;
+  color:var(--blue);
+  margin-bottom:14px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.pi-row{
+  display:flex;
+  justify-content:space-between;
+  padding:7px 0;
+  border-bottom:1px solid var(--border);
+  font-size:11px;
+}
+
+.pi-row:last-child{border-bottom:none}
+.pi-key{color:var(--sub)}
+.pi-val{font-family:var(--ff-display);font-weight:600}
+
+/* ─── SHARE MODAL ─── */
+.modal{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.8);
+  z-index:500;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  backdrop-filter:blur(6px);
+}
+
+.modal.open{display:flex}
+
+.modal-inner{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:28px;
+  width:500px;
+  max-width:95vw;
+  position:relative;
+  animation:fu .2s ease both;
+}
+
+.modal-close{
+  position:absolute;top:16px;right:16px;
+  background:none;border:none;
+  color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;
+}
+
+.modal-close:hover{color:var(--text)}
+
+.modal-title{
+  font-family:var(--ff-display);
+  font-weight:700;
+  font-size:18px;
+  letter-spacing:-.3px;
+  margin-bottom:20px;
+}
+
+/* SLIP share card */
+.slip-share-card{
+  background:#06060a;
+  border:1px solid #1c1c2e;
+  border-radius:6px;
+  padding:22px 26px;
+  aspect-ratio:1.91;
+  position:relative;
+  overflow:hidden;
+  margin-bottom:16px;
+  font-family:var(--ff-mono);
+}
+
+.slip-share-card::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(139,92,246,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139,92,246,.04) 1px, transparent 1px);
+  background-size:28px 28px;
+}
+
+.ssc-inner{position:relative;z-index:1}
+.ssc-eyebrow{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#4a4a68;margin-bottom:8px}
+.ssc-diag{font-family:var(--ff-display);font-weight:700;font-size:24px;letter-spacing:-.5px;margin-top:8px}
+.ssc-token{font-size:10px;color:#4a4a68;margin-top:3px}
+.ssc-text{font-size:10px;color:#6060808;line-height:1.6;margin-top:12px;max-width:55%}
+.ssc-pnl{position:absolute;right:26px;top:20px;font-family:var(--ff-display);font-weight:700;font-size:34px;letter-spacing:-1.5px;line-height:1;z-index:1}
+.ssc-footer{position:absolute;bottom:14px;left:26px;right:26px;display:flex;justify-content:space-between;font-size:8px;color:#252535;z-index:1}
+.ssc-brand{font-family:var(--ff-display);font-weight:700;font-size:10px}
+
+.modal-actions{display:flex;gap:8px}
+
+/* ─── TOAST ─── */
+.toast{
+  position:fixed;bottom:24px;right:24px;
+  background:var(--s2);
+  border:1px solid var(--border2);
+  border-radius:4px;
+  padding:10px 18px;
+  font-size:12px;
+  color:var(--text);
+  z-index:600;
+  transform:translateY(10px);
+  opacity:0;
+  transition:all .25s;
+  pointer-events:none;
+}
+
+.toast.show{transform:translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="goToConnect()">
+    <div class="nav-logo-mark"></div>
+    SLIP
+  </div>
+
+  <div class="nav-wallet" id="nav-wallet">
+    <div class="nav-wallet-dot"></div>
+    <span id="nav-wallet-addr">—</span>
+  </div>
+
+  <div class="nav-right">
+    <span class="nav-badge">SOLANA</span>
+  </div>
+</nav>
+
+<!-- PANEL BACKDROP -->
+<div class="panel-backdrop" id="panel-backdrop" onclick="closePanels()"></div>
+
+<!-- ══════════════ SCREEN 0: CONNECT ══════════════ -->
+<section id="s-connect" class="screen active">
+
+  <p class="connect-eyebrow">Onchain Trade Intelligence</p>
+
+  <h1 class="connect-title">
+    Your trades.<br>
+    <span class="red">Unfiltered.</span>
+  </h1>
+
+  <p class="connect-sub">
+    Connect your wallet. SLIP reads your last 100 trades, scores your performance, shows you who won your money and why.
+  </p>
+
+  <div class="connect-box">
+    <div class="connect-box-label">Enter wallet address</div>
+
+    <div class="connect-input-wrap">
+      <input class="connect-input" id="wallet-input"
+        placeholder="Paste Solana wallet address..."
+        spellcheck="false" autocomplete="off">
+      <button class="btn-connect" onclick="beginAnalysis()">Analyze →</button>
+    </div>
+
+    <div class="connect-divider">OR CONNECT WALLET</div>
+
+    <button class="btn-wallet" onclick="connectPhantom()">
+      <div class="btn-wallet-icon" style="background:#4e44ce22;color:#ab9ff2">👻</div>
+      <span class="btn-wallet-name">Phantom</span>
+      <span class="btn-wallet-arrow">→</span>
+    </button>
+
+    <button class="btn-wallet" onclick="connectSolflare()">
+      <div class="btn-wallet-icon" style="background:#ff620022;color:#ff8c42">☀</div>
+      <span class="btn-wallet-name">Solflare</span>
+      <span class="btn-wallet-arrow">→</span>
+    </button>
+  </div>
+
+  <div class="demo-chips">
+    <span class="demo-label">Try a demo wallet →</span>
+    <span class="demo-chip" onclick="loadDemo('7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU')">Heavy Trader</span>
+    <span class="demo-chip" onclick="loadDemo('DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKH')">Paper Hands Wallet</span>
+    <span class="demo-chip" onclick="loadDemo('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM')">Degen Max</span>
+  </div>
+
+  <div class="connect-value-strip">
+    <div class="value-cell">
+      <div class="value-icon">📋</div>
+      <div class="value-title">PAYSLIP</div>
+      <div class="value-desc">Your full trade history scored. Diagnosis, grade, and pattern tax.</div>
+    </div>
+    <div class="value-cell">
+      <div class="value-icon">🪞</div>
+      <div class="value-title">MIRROR</div>
+      <div class="value-desc">See who won your token and exactly how they did it.</div>
+    </div>
+    <div class="value-cell">
+      <div class="value-icon">⚖️</div>
+      <div class="value-title">VERDICT</div>
+      <div class="value-desc">Full safety and market structure scan before you enter.</div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════ SCREEN 1: LOADING ══════════════ -->
+<section id="s-loading" class="screen">
+
+  <div class="loading-greeting" id="loading-greeting">Analyzing wallet</div>
+  <div class="loading-wallet-addr" id="loading-addr">—</div>
+
+  <div class="loading-panel">
+    <div class="loading-panel-header">
+      <span>Running your Payslip</span>
+      <span id="loading-pct" style="color:var(--red)">0%</span>
+    </div>
+
+    <div class="loading-step" id="ls-1">
+      <div class="ls-icon" id="li-1">1</div>
+      <div>
+        <div class="ls-text">Fetching swap history</div>
+        <div class="ls-sub">Helius Enhanced API · last 100 txs</div>
+      </div>
+    </div>
+
+    <div class="loading-step" id="ls-2">
+      <div class="ls-icon" id="li-2">2</div>
+      <div>
+        <div class="ls-text">Resolving token metadata</div>
+        <div class="ls-sub">Birdeye · pump.fun API</div>
+      </div>
+    </div>
+
+    <div class="loading-step" id="ls-3">
+      <div class="ls-icon" id="li-3">3</div>
+      <div>
+        <div class="ls-text">Pricing each trade</div>
+        <div class="ls-sub">historical_price_unix · OHLCV</div>
+      </div>
+    </div>
+
+    <div class="loading-step" id="ls-4">
+      <div class="ls-icon" id="li-4">4</div>
+      <div>
+        <div class="ls-text">Finding who won your tokens</div>
+        <div class="ls-sub">Birdeye top traders · gap analysis</div>
+      </div>
+    </div>
+
+    <div class="loading-step" id="ls-5">
+      <div class="ls-icon" id="li-5">5</div>
+      <div>
+        <div class="ls-text">Scoring and diagnosing</div>
+        <div class="ls-sub">SLIP analysis engine + AI narration</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-bar-wrap">
+    <div class="loading-bar" id="loading-bar"></div>
+  </div>
+
+</section>
+
+<!-- ══════════════ SCREEN 2: PAYSLIP ══════════════ -->
+<section id="s-payslip" class="screen">
+
+  <!-- PERSONAL HEADER -->
+  <div class="payslip-header">
+    <div class="ph-left">
+      <div class="ph-greeting" id="ph-greeting">Wallet connected</div>
+      <h2 class="ph-title">Your Payslip</h2>
+      <div class="ph-wallet" id="ph-wallet">—</div>
+    </div>
+    <div class="ph-right">
+      <div class="ph-period">Last 30 days · 10 trades</div>
+      <button class="ph-new-analysis" onclick="goToConnect()">← Analyze another wallet</button>
+    </div>
+  </div>
+
+  <!-- GRADE + BREAKDOWN -->
+  <div class="grade-summary-row">
+    <div class="grade-card" style="--grade-glow:rgba(249,115,22,.08)">
+      <div class="grade-letter grade-d">D+</div>
+      <div class="grade-score">38 / 100</div>
+      <div class="grade-label">Overall Grade</div>
+    </div>
+    <div class="grade-breakdown">
+      <div class="gb-cell">
+        <div class="gb-label">Entry Discipline</div>
+        <div class="gb-letter grade-d">D</div>
+        <div class="gb-score">32 / 100</div>
+      </div>
+      <div class="gb-cell">
+        <div class="gb-label">Exit Discipline</div>
+        <div class="gb-letter grade-c">C</div>
+        <div class="gb-score">54 / 100</div>
+      </div>
+      <div class="gb-cell">
+        <div class="gb-label">Size Management</div>
+        <div class="gb-letter grade-c">C+</div>
+        <div class="gb-score">61 / 100</div>
+      </div>
+      <div class="gb-cell">
+        <div class="gb-label">Token Selection</div>
+        <div class="gb-letter grade-f">F</div>
+        <div class="gb-score">18 / 100</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY STATS -->
+  <div class="key-stats">
+    <div class="ks-cell">
+      <div class="ks-label">Total P&L</div>
+      <div class="ks-val" style="color:var(--red)">-23.4 SOL</div>
+      <div class="ks-sub">Realized across 10 trades</div>
+    </div>
+    <div class="ks-cell">
+      <div class="ks-label">Left on Table</div>
+      <div class="ks-val" style="color:var(--amber)">+61.2 SOL</div>
+      <div class="ks-sub">Peak vs actual exits</div>
+    </div>
+    <div class="ks-cell">
+      <div class="ks-label">Worst Trade</div>
+      <div class="ks-val" style="color:var(--red)">-14.2 SOL</div>
+      <div class="ks-sub">$BONK · Apr 14</div>
+    </div>
+    <div class="ks-cell">
+      <div class="ks-label">Avg Entry Percentile</div>
+      <div class="ks-val" style="color:var(--text)">78th</div>
+      <div class="ks-sub">Higher = worse timing</div>
+    </div>
+  </div>
+
+  <!-- PATTERN TAX -->
+  <div class="pattern-banner">
+    <div class="pb-icon">⚠</div>
+    <div>
+      <div class="pb-title">You bought the top 5 times this month. It cost you 48.6 SOL.</div>
+      <div class="pb-text">
+        Every time you lost, the winning wallet entered <b>11 minutes earlier</b> at a lower market cap. Your average hold time on losses is <b>4.2 hours</b>. Winners on those same tokens exited in <b>28 minutes</b>. You're not picking wrong tokens — you're entering them after the money has already been made.
+      </div>
+    </div>
+  </div>
+
+  <!-- TRADES -->
+  <div class="section-label">Trade Breakdown</div>
+
+  <div class="sort-row">
+    <button class="sort-btn active">Worst First</button>
+    <button class="sort-btn">Recent</button>
+    <button class="sort-btn">Biggest Size</button>
+  </div>
+
+  <!-- TRADE 1 -->
+  <div class="trade-card diag-bought" id="tc-1">
+    <div class="card-top" onclick="toggleCard('tc-1')">
+      <div class="card-rank r1">1</div>
+      <div class="card-main">
+        <div class="card-token-row">
+          <span class="card-symbol">$BONK</span>
+          <span class="diag-tag tag-bought">Bought the Top</span>
+        </div>
+        <div class="card-date">Apr 14, 2026 · 09:42 UTC</div>
+      </div>
+      <div class="card-winner-mini">
+        <div class="cwm-top">+214.8 SOL</div>
+        <div class="cwm-label">top winner · same token</div>
+        <div class="cwm-label" style="margin-top:2px;color:var(--red)">2h 32m before you</div>
+      </div>
+      <div class="card-pnl">
+        <div class="pnl-val" style="color:var(--red)">-14.2 SOL</div>
+        <div class="pnl-label">REALIZED · DAMAGE 94</div>
+      </div>
+    </div>
+
+    <div class="card-detail">
+      <div class="detail-split">
+        <div class="detail-half">
+          <div class="detail-half-title dht-you">◉ YOUR TRADE</div>
+          <div class="detail-row">
+            <span class="dr-key">Entry Price</span>
+            <span class="dr-val">$0.00001847</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Entry Percentile</span>
+            <span class="dr-val" style="color:var(--red)">91st of candle</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Exit Price</span>
+            <span class="dr-val">$0.00000401</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Peak After Entry</span>
+            <span class="dr-val" style="color:var(--green)">$0.00001902</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">SOL Spent</span>
+            <span class="dr-val">18.0 SOL</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">SOL Received</span>
+            <span class="dr-val" style="color:var(--red)">3.8 SOL</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Left on Table</span>
+            <span class="dr-val" style="color:var(--amber)">+17.4 SOL</span>
+          </div>
+        </div>
+        <div class="detail-half">
+          <div class="detail-half-title dht-winner">◈ TOP WINNER · 7XKX...SASU</div>
+          <div class="detail-row">
+            <span class="dr-key">Entry Price</span>
+            <span class="dr-val">$0.00000388</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Entry Market Cap</span>
+            <span class="dr-val" style="color:var(--green)">$41k</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Entry Timing</span>
+            <span class="dr-val" style="color:var(--green)">2h 32m before you</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">SOL Deployed</span>
+            <span class="dr-val">18.0 SOL</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Exit Timing</span>
+            <span class="dr-val">Partial at +3h 42m</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Total P&L</span>
+            <span class="dr-val" style="color:var(--green)">+214.8 SOL</span>
+          </div>
+          <div class="detail-row">
+            <span class="dr-key">Used DEX</span>
+            <span class="dr-val">Raydium direct</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="diagnosis-block db-bought">
+        <b>Why they won and you didn't:</b> Same token, same size, completely different outcome. The winner entered 2h 32m before you at $41k market cap. By the time you entered at $240k, they were sitting on a 5x and planning their exit. You were their exit liquidity. They used Raydium direct — lower slippage than your Jupiter route. They took partial profits at the 3h 42m mark. You held through their sell pressure and caught the dump.
+      </div>
+
+      <div class="card-actions">
+        <button class="action-btn verdict-action" onclick="openVerdict('BONK','DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263')">
+          ⚖ Run Verdict on $BONK
+        </button>
+        <button class="action-btn mirror-action" onclick="openMirror('BONK','DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263')">
+          🪞 Full Mirror →
+        </button>
+        <button class="action-btn share-action" onclick="openShare('BOUGHT_THE_TOP','$BONK','-14.2')">
+          Share Payslip
+        </button>
+        <button class="action-btn x-action" onclick="shareX('$BONK','BOUGHT_THE_TOP','-14.2')">𝕏</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRADE 2 -->
+  <div class="trade-card diag-paper" id="tc-2">
+    <div class="card-top" onclick="toggleCard('tc-2')">
+      <div class="card-rank r2">2</div>
+      <div class="card-main">
+        <div class="card-token-row">
+          <span class="card-symbol">$WIF</span>
+          <span class="diag-tag tag-paper">Paper Hands</span>
+        </div>
+        <div class="card-date">Apr 11, 2026 · 14:17 UTC</div>
+      </div>
+      <div class="card-winner-mini">
+        <div class="cwm-top">+88.3 SOL</div>
+        <div class="cwm-label">top winner · same token</div>
+        <div class="cwm-label" style="margin-top:2px;color:var(--sub)">Similar entry timing</div>
+      </div>
+      <div class="card-pnl">
+        <div class="pnl-val" style="color:var(--green)">+2.1 SOL</div>
+        <div class="pnl-label">REALIZED · DAMAGE 71</div>
+      </div>
+    </div>
+
+    <div class="card-detail">
+      <div class="detail-split">
+        <div class="detail-half">
+          <div class="detail-half-title dht-you">◉ YOUR TRADE</div>
+          <div class="detail-row"><span class="dr-key">Entry Price</span><span class="dr-val">$1.42</span></div>
+          <div class="detail-row"><span class="dr-key">Entry Percentile</span><span class="dr-val" style="color:var(--green)">34th of candle</span></div>
+          <div class="detail-row"><span class="dr-key">Exit Price</span><span class="dr-val">$1.61</span></div>
+          <div class="detail-row"><span class="dr-key">Peak After Entry</span><span class="dr-val" style="color:var(--green)">$2.34</span></div>
+          <div class="detail-row"><span class="dr-key">SOL Spent</span><span class="dr-val">12.0 SOL</span></div>
+          <div class="detail-row"><span class="dr-key">Left on Table</span><span class="dr-val" style="color:var(--amber)">+10.7 SOL</span></div>
+        </div>
+        <div class="detail-half">
+          <div class="detail-half-title dht-winner">◈ TOP WINNER · 3PQR...MN7X</div>
+          <div class="detail-row"><span class="dr-key">Entry Price</span><span class="dr-val">$1.39</span></div>
+          <div class="detail-row"><span class="dr-key">Entry Timing</span><span class="dr-val">Similar to yours</span></div>
+          <div class="detail-row"><span class="dr-key">Exit Timing</span><span class="dr-val" style="color:var(--green)">Held to $2.30</span></div>
+          <div class="detail-row"><span class="dr-key">Total P&L</span><span class="dr-val" style="color:var(--green)">+88.3 SOL</span></div>
+        </div>
+      </div>
+
+      <div class="diagnosis-block db-sold">
+        <b>Why they won and you didn't:</b> Your entry was good — 34th percentile, near the candle low. Same entry as the winner. But you exited at +13% into the move. The winner held through 3 pullbacks and sold near $2.30. <b>Your entry discipline was correct. Your exit discipline cost you 10.7 SOL.</b> This is a patience problem, not a conviction problem.
+      </div>
+
+      <div class="card-actions">
+        <button class="action-btn verdict-action" onclick="openVerdict('WIF','EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm')">
+          ⚖ Run Verdict on $WIF
+        </button>
+        <button class="action-btn mirror-action" onclick="openMirror('WIF','EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm')">
+          🪞 Full Mirror →
+        </button>
+        <button class="action-btn share-action" onclick="openShare('PAPER_HANDS','$WIF','+2.1')">Share Payslip</button>
+        <button class="action-btn x-action" onclick="shareX('$WIF','PAPER_HANDS','+2.1')">𝕏</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRADE 3 -->
+  <div class="trade-card diag-good" id="tc-3">
+    <div class="card-top" onclick="toggleCard('tc-3')">
+      <div class="card-rank r3">3</div>
+      <div class="card-main">
+        <div class="card-token-row">
+          <span class="card-symbol">$JUP</span>
+          <span class="diag-tag tag-good">Good Trade</span>
+        </div>
+        <div class="card-date">Apr 05, 2026 · 08:11 UTC</div>
+      </div>
+      <div class="card-winner-mini">
+        <div class="cwm-top" style="color:var(--sub)">+5.8 SOL</div>
+        <div class="cwm-label">top winner · same token</div>
+        <div class="cwm-label" style="margin-top:2px;color:var(--green)">You captured 91% of move</div>
+      </div>
+      <div class="card-pnl">
+        <div class="pnl-val" style="color:var(--green)">+5.3 SOL</div>
+        <div class="pnl-label">REALIZED · DAMAGE 4</div>
+      </div>
+    </div>
+
+    <div class="card-detail">
+      <div class="detail-split">
+        <div class="detail-half">
+          <div class="detail-half-title dht-you">◉ YOUR TRADE</div>
+          <div class="detail-row"><span class="dr-key">Entry Price</span><span class="dr-val">$0.00341</span></div>
+          <div class="detail-row"><span class="dr-key">Entry Percentile</span><span class="dr-val" style="color:var(--green)">28th of candle</span></div>
+          <div class="detail-row"><span class="dr-key">Exit Price</span><span class="dr-val" style="color:var(--green)">$0.00523</span></div>
+          <div class="detail-row"><span class="dr-key">Peak After Entry</span><span class="dr-val" style="color:var(--green)">$0.00561</span></div>
+          <div class="detail-row"><span class="dr-key">SOL Spent</span><span class="dr-val">6.0 SOL</span></div>
+          <div class="detail-row"><span class="dr-key">Left on Table</span><span class="dr-val" style="color:var(--green)">+0.5 SOL</span></div>
+        </div>
+        <div class="detail-half">
+          <div class="detail-half-title dht-winner">◈ TOP WINNER</div>
+          <div class="detail-row"><span class="dr-key">Entry Timing</span><span class="dr-val">Similar to yours</span></div>
+          <div class="detail-row"><span class="dr-key">Total P&L</span><span class="dr-val" style="color:var(--green)">+5.8 SOL</span></div>
+          <div class="detail-row"><span class="dr-key">Your capture rate</span><span class="dr-val" style="color:var(--green)">91% of the move</span></div>
+        </div>
+      </div>
+
+      <div class="diagnosis-block db-good">
+        <b>Solid trade.</b> Low entry percentile, clean hold, exited close to peak. You captured 91% of the available move. This is the template. Repeat this.
+      </div>
+
+      <div class="card-actions">
+        <button class="action-btn mirror-action" onclick="openMirror('JUP','JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN')">
+          🪞 Full Mirror →
+        </button>
+        <button class="action-btn share-action" onclick="openShare('GOOD_TRADE','$JUP','+5.3')">Share Payslip</button>
+        <button class="action-btn x-action">𝕏</button>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════ VERDICT SIDE PANEL ══════════════ -->
+<div class="side-panel" id="panel-verdict">
+  <div class="panel-header">
+    <div class="panel-header-left">
+      <div class="panel-type-label" style="color:var(--red)">⚖ VERDICT</div>
+      <div class="panel-title" id="verdict-panel-title">Token Safety Scan</div>
+    </div>
+    <div class="panel-close" onclick="closeVerdict()">✕</div>
+  </div>
+
+  <div class="panel-body">
+
+    <div class="verdict-hero">
+      <div class="vscore-ring">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="34" fill="none" stroke="var(--border2)" stroke-width="5"/>
+          <circle cx="40" cy="40" r="34" fill="none" stroke="var(--amber)" stroke-width="5"
+            stroke-linecap="round"
+            stroke-dasharray="213.6"
+            stroke-dashoffset="64"/>
+        </svg>
+        <div class="vscore-num">
+          <span style="color:var(--amber)">70</span>
+          <span class="vscore-sublabel">/100</span>
+        </div>
+      </div>
+
+      <div class="verdict-info">
+        <div class="verdict-badge vb-caution">CAUTION</div>
+        <div class="verdict-token" id="verdict-token-label">$BONK · DezXAZ...PB263</div>
+        <div class="verdict-summary">LP unlocked. Top 10 holders control 61% of supply. Enter with reduced size and a clear exit plan.</div>
+      </div>
+    </div>
+
+    <!-- Safety checks -->
+    <div class="check-section">
+      <div class="check-section-header">
+        <span>Safety Layer</span>
+        <span>Can you exit?</span>
+      </div>
+
+      <div class="check-row">
+        <div class="check-icon ci-pass">✓</div>
+        <div class="check-content">
+          <div class="check-name">Mint Authority</div>
+          <div class="check-detail">Disabled. Supply is fixed. Dev cannot print more tokens.</div>
+        </div>
+        <span class="check-sev sev-pass">PASS</span>
+      </div>
+
+      <div class="check-row">
+        <div class="check-icon ci-pass">✓</div>
+        <div class="check-content">
+          <div class="check-name">Freeze Authority</div>
+          <div class="check-detail">No freeze authority. Your tokens cannot be locked.</div>
+        </div>
+        <span class="check-sev sev-pass">PASS</span>
+      </div>
+
+      <div class="check-row">
+        <div class="check-icon ci-fail">✕</div>
+        <div class="check-content">
+          <div class="check-name">Liquidity Lock</div>
+          <div class="check-detail">LP is NOT locked. Dev can remove all liquidity at any time.</div>
+        </div>
+        <span class="check-sev sev-critical">CRITICAL</span>
+      </div>
+
+      <div class="check-row">
+        <div class="check-icon ci-pass">✓</div>
+        <div class="check-content">
+          <div class="check-name">Transfer Hook</div>
+          <div class="check-detail">No custom hooks. Sells execute normally.</div>
+        </div>
+        <span class="check-sev sev-pass">PASS</span>
+      </div>
+    </div>
+
+    <!-- Market structure -->
+    <div class="check-section">
+      <div class="check-section-header">
+        <span>Market Structure</span>
+        <span>Is the setup healthy?</span>
+      </div>
+
+      <div class="check-row">
+        <div class="check-icon ci-warn">!</div>
+        <div class="check-content">
+          <div class="check-name">Top 10 Holders</div>
+          <div class="check-detail">61.4% of supply. 3 wallets entered in last 2 hours.</div>
+        </div>
+        <span class="check-sev sev-warning">WARNING</span>
+      </div>
+
+      <div class="check-row">
+        <div class="check-icon ci-pass">✓</div>
+        <div class="check-content">
+          <div class="check-name">Deployer History</div>
+          <div class="check-detail">12% rug rate across 8 tokens. No known scammer flag.</div>
+        </div>
+        <span class="check-sev sev-pass">LOW RISK</span>
+      </div>
+
+      <div class="check-row">
+        <div class="check-icon ci-warn">!</div>
+        <div class="check-content">
+          <div class="check-name">Dev Wallet Activity</div>
+          <div class="check-detail">Dev moved 2.4 SOL to an exchange wallet 38 minutes ago.</div>
+        </div>
+        <span class="check-sev sev-warning">WATCH</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ MIRROR SIDE PANEL ══════════════ -->
+<div class="side-panel" id="panel-mirror">
+  <div class="panel-header">
+    <div class="panel-header-left">
+      <div class="panel-type-label" style="color:var(--blue)">🪞 MIRROR</div>
+      <div class="panel-title" id="mirror-panel-title">Winner Leaderboard</div>
+    </div>
+    <div class="panel-close" onclick="closeMirror()">✕</div>
+  </div>
+
+  <div class="panel-body">
+
+    <div class="mirror-panel-token" id="mirror-token-label">
+      Showing all wallets that won on <b>$BONK</b> — ranked by SOL gained
+    </div>
+
+    <div class="lb-table">
+      <div class="lb-head">
+        <span>#</span>
+        <span>Wallet</span>
+        <span>P&L</span>
+        <span>Hold</span>
+      </div>
+
+      <div class="lb-row top-row">
+        <div class="lb-rank-num rk1">1</div>
+        <div>
+          <div class="lb-wallet-addr">7xKX...sAsU <span class="wallet-tag-sm wt-smart">Smart Money</span></div>
+          <div class="lb-wallet-sub">$41k mcap · 2h 32m before you · Raydium</div>
+        </div>
+        <div class="lb-pnl-val">+214.8</div>
+        <div class="lb-hold-time">3h 42m</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank-num rk2">2</div>
+        <div>
+          <div class="lb-wallet-addr">3pQR...mN7x <span class="wallet-tag-sm wt-kol">KOL</span></div>
+          <div class="lb-wallet-sub">$58k mcap · 3h 20m before you · Jupiter</div>
+        </div>
+        <div class="lb-pnl-val">+88.3</div>
+        <div class="lb-hold-time">2h 55m</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank-num rk3">3</div>
+        <div>
+          <div class="lb-wallet-addr">9fBc...w2Yz <span class="wallet-tag-sm wt-bot">Bot</span></div>
+          <div class="lb-wallet-sub">$63k mcap · 3h 10m before you · Raydium</div>
+        </div>
+        <div class="lb-pnl-val">+61.2</div>
+        <div class="lb-hold-time">Partial 2h</div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-rank-num">4</div>
+        <div>
+          <div class="lb-wallet-addr">DmNk...p9Xc</div>
+          <div class="lb-wallet-sub">$120k mcap · 2h 30m before you</div>
+        </div>
+        <div class="lb-pnl-val">+22.4</div>
+        <div class="lb-hold-time">Still in</div>
+      </div>
+
+      <div class="lb-row you-row">
+        <div class="lb-rank-num" style="color:var(--purple)">YOU</div>
+        <div>
+          <div class="lb-wallet-addr">YrWz...k4Pm <span class="wallet-tag-sm wt-you">You</span></div>
+          <div class="lb-wallet-sub">$240k mcap · PUMP_SWAP</div>
+        </div>
+        <div class="lb-pnl-val neg">-14.2</div>
+        <div class="lb-hold-time">Exited</div>
+      </div>
+    </div>
+
+    <div class="pattern-insights">
+      <div class="pi-title">◈ What Top 10 Winners Had in Common</div>
+      <div class="pi-row"><span class="pi-key">Avg entry market cap</span><span class="pi-val">$52k</span></div>
+      <div class="pi-row"><span class="pi-key">Avg hold before partial exit</span><span class="pi-val">28 min</span></div>
+      <div class="pi-row"><span class="pi-key">Most used DEX</span><span class="pi-val">Raydium (7/10)</span></div>
+      <div class="pi-row"><span class="pi-key">Took partial profits</span><span class="pi-val">8 out of 10</span></div>
+      <div class="pi-row"><span class="pi-key">Avg entry before peak</span><span class="pi-val">2h 14m earlier</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal" id="share-modal">
+  <div class="modal-inner">
+    <button class="modal-close" onclick="closeShare()">✕</button>
+    <div class="modal-title">Your SLIP Card</div>
+
+    <div class="slip-share-card">
+      <div class="ssc-inner">
+        <div class="ssc-eyebrow">PAYSLIP · SLIP · SOLANA</div>
+        <div class="ssc-diag" id="ssc-diag" style="color:var(--red)">BOUGHT THE TOP</div>
+        <div class="ssc-token" id="ssc-token">$BONK · Apr 14, 2026</div>
+        <div class="ssc-text">Entered 91st percentile. Winner made +214.8 SOL on same token, 2h 32m before me. I was exit liquidity.</div>
+      </div>
+      <div class="ssc-pnl" id="ssc-pnl" style="color:var(--red)">-14.2<br><span style="font-size:14px;letter-spacing:0">SOL</span></div>
+      <div class="ssc-footer">
+        <div class="ssc-brand">SLIP</div>
+        <div>slip.xyz · onchain trade intelligence</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="action-btn" onclick="copyShareLink()">Copy Link</button>
+      <button class="action-btn x-action" onclick="shareXModal()">Post to 𝕏</button>
+      <button class="action-btn" onclick="toast('PNG download live in production')">Save PNG</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════
+   ROUTING
+═══════════════════════════ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goToConnect(){
+  showScreen('s-connect');
+  document.getElementById('nav-wallet').classList.remove('visible');
+  closePanels();
+}
+
+/* ═══════════════════════════
+   DEMO CHIPS
+═══════════════════════════ */
+function loadDemo(addr){
+  document.getElementById('wallet-input').value = addr;
+}
+
+/* ═══════════════════════════
+   WALLET CONNECT (mock)
+═══════════════════════════ */
+function connectPhantom(){
+  document.getElementById('wallet-input').value = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+  beginAnalysis();
+}
+
+function connectSolflare(){
+  document.getElementById('wallet-input').value = 'DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKH';
+  beginAnalysis();
+}
+
+/* ═══════════════════════════
+   BEGIN ANALYSIS FLOW
+═══════════════════════════ */
+function beginAnalysis(){
+  const wallet = document.getElementById('wallet-input').value.trim();
+  if(!wallet || wallet.length < 32){
+    toast('Enter a valid Solana wallet address');
+    return;
+  }
+
+  const short = wallet.slice(0,6) + '...' + wallet.slice(-4);
+
+  // Update nav
+  document.getElementById('nav-wallet-addr').textContent = short;
+  document.getElementById('nav-wallet').classList.add('visible');
+
+  // Update loading screen
+  document.getElementById('loading-greeting').textContent = 'Analyzing wallet';
+  document.getElementById('loading-addr').textContent = short;
+
+  // Update payslip header
+  document.getElementById('ph-greeting').textContent = 'Connected · ' + short;
+  document.getElementById('ph-wallet').textContent = wallet.slice(0,14) + '...' + wallet.slice(-8);
+
+  showScreen('s-loading');
+  runLoadingSequence(() => showScreen('s-payslip'));
+}
+
+/* ═══════════════════════════
+   LOADING SEQUENCE
+═══════════════════════════ */
+function runLoadingSequence(onDone){
+  // Reset all steps
+  for(let i=1;i<=5;i++){
+    const step = document.getElementById('ls-'+i);
+    const icon = document.getElementById('li-'+i);
+    step.className = 'loading-step';
+    icon.textContent = i;
+    icon.style.background='';
+    icon.style.borderColor='';
+    icon.style.color='';
+    icon.style.animation='';
+  }
+
+  const bar = document.getElementById('loading-bar');
+  const pct = document.getElementById('loading-pct');
+  bar.style.width='0%';
+
+  const timeline = [
+    {id:1, start:0,    dur:1200},
+    {id:2, start:1200, dur:800},
+    {id:3, start:2000, dur:1000},
+    {id:4, start:3000, dur:900},
+    {id:5, start:3900, dur:700},
+  ];
+  const total = 4600;
+
+  timeline.forEach(({id,start,dur}) => {
+    setTimeout(()=>{
+      const step = document.getElementById('ls-'+id);
+      const icon = document.getElementById('li-'+id);
+      step.classList.add('active');
+      icon.textContent='';
+    }, start);
+
+    setTimeout(()=>{
+      const step = document.getElementById('ls-'+id);
+      const icon = document.getElementById('li-'+id);
+      step.classList.remove('active');
+      step.classList.add('done');
+      icon.textContent='✓';
+      icon.style.background='var(--green)';
+      icon.style.borderColor='var(--green)';
+      icon.style.color='#000';
+      icon.style.animation='none';
+
+      const p = Math.round(((start+dur)/total)*100);
+      bar.style.width=p+'%';
+      pct.textContent=p+'%';
+    }, start+dur);
+  });
+
+  setTimeout(()=>{
+    bar.style.width='100%';
+    pct.textContent='100%';
+    setTimeout(onDone,300);
+  }, total);
+}
+
+/* ═══════════════════════════
+   TRADE CARD TOGGLE
+═══════════════════════════ */
+function toggleCard(id){
+  const card = document.getElementById(id);
+  const was = card.classList.contains('open');
+  document.querySelectorAll('.trade-card.open').forEach(c=>c.classList.remove('open'));
+  if(!was) card.classList.add('open');
+}
+
+/* ═══════════════════════════
+   SORT TABS
+═══════════════════════════ */
+document.querySelectorAll('.sort-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+/* ═══════════════════════════
+   VERDICT PANEL
+═══════════════════════════ */
+function openVerdict(symbol, mint){
+  document.getElementById('verdict-panel-title').textContent = '$'+symbol+' Safety Scan';
+  document.getElementById('verdict-token-label').textContent = '$'+symbol+' · '+mint.slice(0,6)+'...'+mint.slice(-4);
+  document.getElementById('panel-verdict').classList.add('open');
+  document.getElementById('panel-backdrop').classList.add('open');
+  // In production: fetch /api/verdict?mint=mint and populate
+}
+
+function closeVerdict(){
+  document.getElementById('panel-verdict').classList.remove('open');
+  document.getElementById('panel-backdrop').classList.remove('open');
+}
+
+/* ═══════════════════════════
+   MIRROR PANEL
+═══════════════════════════ */
+function openMirror(symbol, mint){
+  document.getElementById('mirror-panel-title').textContent = '$'+symbol+' Winners';
+  document.getElementById('mirror-token-label').innerHTML =
+    'Showing all wallets that won on <b>$'+symbol+'</b> — ranked by SOL gained';
+  document.getElementById('panel-mirror').classList.add('open');
+  document.getElementById('panel-backdrop').classList.add('open');
+  // In production: fetch /api/mirror?mint=mint and populate
+}
+
+function closeMirror(){
+  document.getElementById('panel-mirror').classList.remove('open');
+  document.getElementById('panel-backdrop').classList.remove('open');
+}
+
+function closePanels(){
+  closeVerdict();
+  closeMirror();
+}
+
+/* ═══════════════════════════
+   SHARE MODAL
+═══════════════════════════ */
+const DIAG_LABEL = {
+  'BOUGHT_THE_TOP':'BOUGHT THE TOP',
+  'PAPER_HANDS':'PAPER HANDS',
+  'SOLD_THE_BOTTOM':'SOLD THE BOTTOM',
+  'DIAMOND_HANDS_REKT':'DIAMOND HANDS REKT',
+  'GOOD_TRADE':'GOOD TRADE',
+};
+
+const DIAG_COLOR = {
+  'BOUGHT_THE_TOP':'var(--red)',
+  'PAPER_HANDS':'var(--amber)',
+  'SOLD_THE_BOTTOM':'var(--amber)',
+  'DIAMOND_HANDS_REKT':'var(--red)',
+  'GOOD_TRADE':'var(--green)',
+};
+
+function openShare(diag, symbol, pnl){
+  document.getElementById('ssc-diag').textContent = DIAG_LABEL[diag] ?? diag;
+  document.getElementById('ssc-diag').style.color = DIAG_COLOR[diag] ?? 'var(--text)';
+  document.getElementById('ssc-token').textContent = symbol + ' · Solana';
+  document.getElementById('ssc-pnl').style.color = parseFloat(pnl) >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('ssc-pnl').innerHTML = pnl+'<br><span style="font-size:14px;letter-spacing:0">SOL</span>';
+  document.getElementById('share-modal').classList.add('open');
+}
+
+function closeShare(){
+  document.getElementById('share-modal').classList.remove('open');
+}
+
+document.getElementById('share-modal').addEventListener('click',function(e){
+  if(e.target===this) closeShare();
+});
+
+function copyShareLink(){
+  navigator.clipboard?.writeText('https://slip.xyz/payslip/demo').catch(()=>{});
+  toast('Link copied to clipboard');
+}
+
+function shareXModal(){
+  const text = encodeURIComponent('Just ran my wallet through @slip_xyz and got diagnosed with BOUGHT THE TOP 5 times this month 💀\n\nCost me 48.6 SOL. It shows you who actually won your money and exactly why.\n\nslip.xyz');
+  window.open('https://twitter.com/intent/tweet?text='+text,'_blank');
+}
+
+function shareX(symbol, diag, pnl){
+  const diagLabel = DIAG_LABEL[diag] ?? diag;
+  const text = encodeURIComponent(`SLIP just diagnosed my ${symbol} trade as "${diagLabel}" 💀\n\n${pnl} SOL. The top winner made 5x more on the same token.\n\nslip.xyz — find out who won your money`);
+  window.open('https://twitter.com/intent/tweet?text='+text,'_blank');
+}
+
+/* ═══════════════════════════
+   TOAST
+═══════════════════════════ */
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+/* ═══════════════════════════
+   KEYBOARD
+═══════════════════════════ */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') { closeShare(); closePanels(); }
+});
+
+document.getElementById('wallet-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter') beginAnalysis();
+});
+</script>
+</body>
+</html>

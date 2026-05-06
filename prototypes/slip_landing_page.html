@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLIP — Onchain Trade Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{overflow-x:hidden}
+
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:#0a0a14}
+::-webkit-scrollbar-thumb{background:#1c1c2e;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#252538}
+
+/* ─── TOKENS ─── */
+:root{
+  --bg:       #0a0a14;
+  --surface:  #10101c;
+  --s2:       #14141f;
+  --border:   #1a1a28;
+  --border2:  #232335;
+  --text:     #eaeaf5;
+  --sub:      #9090a8;
+  --muted:    #50506a;
+  --dim:      #2a2a38;
+
+  --red:      #ff3030;
+  --red2:     #ff5555;
+  --amber:    #f59e0b;
+  --blue:     #3b82f6;
+  --purple:   #8b5cf6;
+  --green:    #10b981;
+
+  --ff-display: 'Syne', sans-serif;
+  --ff-body:    'Plus Jakarta Sans', sans-serif;
+}
+
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff-body);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ─── HERO BACKGROUND ─── */
+.hero{
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 24px 80px;
+  background: linear-gradient(135deg, #0a0a14 0%, #0f0f1a 50%, #14141f 100%);
+  overflow: hidden;
+}
+
+/* Background image container */
+.hero::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('SLIP_Website_Background.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  opacity: .6;
+  z-index: 0;
+}
+
+/* Dark overlay on background */
+.hero::after{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, transparent 0%, rgba(10,10,20,.5) 100%);
+  z-index: 1;
+}
+
+.hero-content{
+  position: relative;
+  z-index: 2;
+  max-width: 960px;
+  width: 100%;
+  text-align: center;
+}
+
+/* ─── NAV ─── */
+nav{
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  background: rgba(10,10,20,.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+}
+
+.nav-logo{
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -1px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+
+.nav-logo:hover{opacity:.85}
+
+.nav-logo-dot{
+  width: 7px;
+  height: 7px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
+.nav-menu{
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.nav-item{
+  color: var(--sub);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color .2s;
+  cursor: pointer;
+}
+
+.nav-item:hover{color:var(--text)}
+
+.nav-cta{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 16px;
+}
+
+.nav-badge{
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.nav-btn{
+  padding: 8px 18px;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--ff-body);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .2s, transform .1s;
+  letter-spacing: .5px;
+}
+
+.nav-btn:hover{background:#2563eb}
+.nav-btn:active{transform:scale(.98)}
+
+/* ─── HERO CONTENT ─── */
+.hero-eyebrow{
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 28px;
+  animation: slide-in .5s ease both;
+}
+
+.hero-title{
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: clamp(56px, 9vw, 96px);
+  letter-spacing: -2px;
+  line-height: .95;
+  margin-bottom: 24px;
+  animation: slide-in .5s .1s ease both;
+}
+
+.hero-title .unfiltered{
+  color: var(--red);
+  display: inline;
+}
+
+.hero-sub{
+  font-size: 15px;
+  color: var(--sub);
+  max-width: 480px;
+  margin: 0 auto 48px;
+  line-height: 1.8;
+  animation: slide-in .5s .2s ease both;
+}
+
+.hero-actions{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 80px;
+  animation: slide-in .5s .3s ease both;
+}
+
+.btn-primary{
+  padding: 13px 28px;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--ff-body);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.btn-primary:hover{
+  background: #2563eb;
+  transform: translateY(-2px);
+}
+
+.btn-primary:active{transform:translateY(0)}
+
+.btn-secondary{
+  padding: 13px 28px;
+  background: transparent;
+  color: var(--sub);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  font-family: var(--ff-body);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.btn-secondary:hover{
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+/* ─── STATS ─── */
+.hero-stats{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  animation: slide-in .5s .4s ease both;
+}
+
+.stat{
+  text-align: center;
+}
+
+.stat-num{
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+}
+
+.stat-label{
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@keyframes slide-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── FEATURE SECTION ─── */
+.features{
+  padding: 120px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.features-label{
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.features-label::after{
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.features-title{
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 40px;
+  letter-spacing: -1px;
+  margin-bottom: 60px;
+  max-width: 600px;
+}
+
+.features-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  margin-bottom: 80px;
+}
+
+.feature-card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 36px 32px;
+  transition: all .3s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,.02) 100%);
+  pointer-events: none;
+}
+
+.feature-card:hover{
+  border-color: var(--border2);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0,0,0,.2);
+}
+
+.fc-label{
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+  position: relative;z-index:1;
+}
+
+.fc-label.verdict{color:var(--red)}
+.fc-label.mirror{color:var(--blue)}
+.fc-label.payslip{color:var(--purple)}
+
+.fc-title{
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -.5px;
+  margin-bottom: 16px;
+  position: relative;z-index:1;
+}
+
+.fc-desc{
+  font-size: 14px;
+  color: var(--sub);
+  line-height: 1.7;
+  position: relative;z-index:1;
+}
+
+/* ─── FEATURE SHOWCASE ─── */
+.showcase{
+  padding: 80px 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.showcase-inner{
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.showcase-label{
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.showcase-label::before{
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.showcase-title{
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 36px;
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+
+.showcase-sub{
+  font-size: 14px;
+  color: var(--sub);
+  margin-bottom: 48px;
+  max-width: 480px;
+}
+
+.showcase-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.showcase-col{
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.sc-label{
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.sc-title{
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -.3px;
+  margin-bottom: 14px;
+}
+
+.sc-desc{
+  font-size: 13px;
+  color: var(--sub);
+  line-height: 1.8;
+  margin-bottom: 24px;
+}
+
+.sc-items{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sc-item{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.sc-item-dot{
+  width: 6px;
+  height: 6px;
+  background: var(--muted);
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.sc-item-text{color:var(--sub)}
+
+/* Responsive showcase grid */
+@media (max-width: 768px){
+  .showcase-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── CTA SECTION ─── */
+.cta{
+  padding: 80px 24px;
+  background: linear-gradient(135deg, rgba(255,48,48,.05) 0%, rgba(139,92,246,.05) 100%);
+  border-bottom: 1px solid var(--border);
+}
+
+.cta-inner{
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cta-title{
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 36px;
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+}
+
+.cta-sub{
+  font-size: 15px;
+  color: var(--sub);
+  margin-bottom: 32px;
+  line-height: 1.8;
+}
+
+.cta-btn{
+  padding: 14px 36px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--ff-body);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.cta-btn:hover{
+  background: #ff1f1f;
+  transform: translateY(-2px);
+}
+
+.cta-btn:active{transform:translateY(0)}
+
+/* ─── FOOTER ─── */
+footer{
+  padding: 32px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.footer-logo{
+  font-family: var(--ff-display);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.footer-links{
+  display: flex;
+  gap: 32px;
+}
+
+.footer-link{
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .2s;
+}
+
+.footer-link:hover{color:var(--text)}
+
+.footer-right{display:flex;gap:24px;align-items:center}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px){
+  nav{
+    padding: 0 20px;
+  }
+
+  .nav-menu{
+    display: none;
+  }
+
+  .hero{
+    padding: 80px 20px 60px;
+  }
+
+  .hero-title{
+    font-size: 36px;
+  }
+
+  .hero-sub{
+    font-size: 14px;
+  }
+
+  .hero-actions{
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .btn-primary, .btn-secondary{
+    width: 100%;
+  }
+
+  .hero-stats{
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .features-title{
+    font-size: 28px;
+  }
+
+  .features-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .showcase{
+    padding: 60px 20px;
+  }
+
+  .showcase-grid{
+    gap: 24px;
+  }
+
+  .showcase-col{
+    padding: 24px;
+    min-height: auto;
+  }
+
+  .cta-title{
+    font-size: 28px;
+  }
+
+  footer{
+    flex-direction: column;
+    gap: 24px;
+    text-align: center;
+  }
+
+  .footer-links{
+    gap: 16px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-dot"></div>
+    SLIP
+  </div>
+
+  <div class="nav-menu">
+    <a href="#features" class="nav-item">Features</a>
+    <a href="#how" class="nav-item">How it works</a>
+    <a href="https://github.com/yourname/slip" target="_blank" class="nav-item">GitHub</a>
+  </div>
+
+  <div class="nav-cta">
+    <span class="nav-badge">SOLANA</span>
+    <button class="nav-btn" onclick="goToApp()">Connect Wallet</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <p class="hero-eyebrow">ONCHAIN TRADE INTELLIGENCE</p>
+
+    <h1 class="hero-title">
+      Your trades.<br>
+      <span class="unfiltered">Unfiltered.</span>
+    </h1>
+
+    <p class="hero-sub">
+      Connect your wallet. SLIP reads your last 100 trades, scores your
+      performance, shows you who won your money and why.
+    </p>
+
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="goToApp()">Analyze Wallet →</button>
+      <button class="btn-secondary" onclick="scrollTo('#features')">See Features</button>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">24.1K</div>
+        <div class="stat-label">Wallets Analyzed</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">218K</div>
+        <div class="stat-label">Trades Analyzed</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">141K</div>
+        <div class="stat-label">SOL Left on Table</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">9.4K</div>
+        <div class="stat-label">Tokens Scanned</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="features-label">WHAT YOU GET</div>
+
+  <h2 class="features-title">Three tools. One clear answer.</h2>
+
+  <div class="features-grid">
+
+    <!-- VERDICT -->
+    <div class="feature-card">
+      <div class="fc-label verdict">VERDICT</div>
+      <h3 class="fc-title">Before<br>the trade</h3>
+      <p class="fc-desc">
+        Full token safety and market structure scan. Mint authority, LP lock, transfer hooks, deployer history, holder concentration, and timing position. One score. One verdict.
+      </p>
+    </div>
+
+    <!-- MIRROR -->
+    <div class="feature-card">
+      <div class="fc-label mirror">MIRROR</div>
+      <h3 class="fc-title">During<br>the trade</h3>
+      <p class="fc-desc">
+        Every wallet winning on your token right now, ranked by SOL gained. See who entered earlier, with more size, and why they're up while you're not. The gap, explained.
+      </p>
+    </div>
+
+    <!-- PAYSLIP -->
+    <div class="feature-card">
+      <div class="fc-label payslip">PAYSLIP</div>
+      <h3 class="fc-title">After<br>the trade</h3>
+      <p class="fc-desc">
+        Your full trade autopsy. Entry percentile, peak missed, SOL left on table. Who won the most on each token. Your recurring mistakes. Your trading grade, broken down.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- SHOWCASE -->
+<section class="showcase" id="how">
+  <div class="showcase-inner">
+    <div class="showcase-label">DESIGNED FOR TRADERS</div>
+
+    <h2 class="showcase-title">What sets SLIP apart</h2>
+    <p class="showcase-sub">
+      Not a scanner. Not a leaderboard. A complete diagnosis of where your edge went and who actually has it.
+    </p>
+
+    <div class="showcase-grid">
+      <div class="showcase-col">
+        <div>
+          <div class="sc-label">THE PROBLEM</div>
+          <div class="sc-title">You lose. Then what?</div>
+          <div class="sc-desc">
+            You check Solscan. You see your transaction. You see the price. You see your loss. That's it. No one tells you why. No one shows you the winners. No one explains the pattern.
+          </div>
+        </div>
+        <div class="sc-items">
+          <div class="sc-item">
+            <div class="sc-item-dot"></div>
+            <div class="sc-item-text">Losing feels random</div>
+          </div>
+          <div class="sc-item">
+            <div class="sc-item-dot"></div>
+            <div class="sc-item-text">No context on who won</div>
+          </div>
+          <div class="sc-item">
+            <div class="sc-item-dot"></div>
+            <div class="sc-item-text">No pattern recognition</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="showcase-col">
+        <div>
+          <div class="sc-label">THE SLIP DIFFERENCE</div>
+          <div class="sc-title">Loss with understanding</div>
+          <div class="sc-desc">
+            SLIP shows you the exact wallet that took your money, how much they made, why they won, and what they did different. Then it finds the pattern across all your losses and quantifies the cost.
+          </div>
+        </div>
+        <div class="sc-items">
+          <div class="sc-item">
+            <div class="sc-item-dot"></div>
+            <div class="sc-item-text">Loss diagnosis instead of confusion</div>
+          </div>
+          <div class="sc-item">
+            <div class="sc-item-dot"></div>
+            <div class="sc-item-text">Winner leaderboard on every token</div>
+          </div>
+          <div class="sc-item">
+            <div class="sc-item-dot"></div>
+            <div class="sc-item-text">Recurring mistake quantified</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="cta-inner">
+    <h2 class="cta-title">Stop guessing why you lost.</h2>
+    <p class="cta-sub">
+      Connect your wallet. See your trades from a different angle. Understand who won and why.
+    </p>
+    <button class="cta-btn" onclick="goToApp()">Start Analyzing →</button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">SLIP</div>
+  <div class="footer-links">
+    <a href="#" class="footer-link">Docs</a>
+    <a href="https://github.com" target="_blank" class="footer-link">GitHub</a>
+    <a href="#" class="footer-link">Status</a>
+  </div>
+  <div class="footer-right">
+    <span>©2026 SLIP. Built for Solana traders.</span>
+  </div>
+</footer>
+
+<script>
+function goToApp(){
+  // Change this to your app domain
+  // For dev: http://localhost:3000
+  // For prod: https://slip-app.vercel.app
+  window.location.href = 'https://your-app-domain.com';
+}
+
+function scrollTo(selector){
+  const el = document.querySelector(selector);
+  if(el) el.scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>

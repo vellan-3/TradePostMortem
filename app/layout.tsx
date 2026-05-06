@@ -1,5 +1,42 @@
 import type { Metadata } from 'next';
+import { DM_Mono, Instrument_Sans, Space_Grotesk, Space_Mono, Syne } from 'next/font/google';
 import './globals.css';
+import { WalletContextProvider } from '@/components/WalletContextProvider';
+
+const syne = Syne({
+  subsets: ['latin'],
+  weight: ['400', '700', '800'],
+  display: 'swap',
+  variable: '--font-display-primary',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-display-secondary',
+});
+
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-ui',
+});
+
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-mono-secondary',
+});
+
+const dmMono = DM_Mono({
+  subsets: ['latin'],
+  weight: ['300', '400', '500'],
+  display: 'swap',
+  variable: '--font-mono-primary',
+});
 
 export const metadata: Metadata = {
   title: 'SLIP — Onchain Trade Intelligence',
@@ -24,17 +61,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html
+      lang="en"
+      className={`${syne.variable} ${spaceGrotesk.variable} ${instrumentSans.variable} ${spaceMono.variable} ${dmMono.variable}`}
+    >
       <body>
         <div className="grid-bg" />
-        {children}
+        <WalletContextProvider>
+          {children}
+        </WalletContextProvider>
       </body>
     </html>
   );

@@ -1,17 +1,15 @@
-// ─── Core parsed swap from Helius ─────────────────────────────────────────
 export interface ParsedSwap {
   signature: string;
-  timestamp: number; // unix seconds
+  timestamp: number;
   tokenMint: string;
   tokenSymbol: string;
   tokenName: string;
-  tokenIn: number; // SOL spent (buy) or token amount (sell)
-  tokenOut: number; // token received (buy) or SOL received (sell)
+  tokenIn: number;
+  tokenOut: number;
   isBuy: boolean;
-  source: string; // "JUPITER", "RAYDIUM", etc.
+  source: string;
 }
 
-// ─── Diagnosis types ──────────────────────────────────────────────────────
 export type DiagnosisCode =
   | 'BOUGHT_THE_TOP'
   | 'SOLD_THE_BOTTOM'
@@ -20,7 +18,171 @@ export type DiagnosisCode =
   | 'GOOD_TRADE'
   | 'UNKNOWN';
 
-// ─── Full trade analysis result ───────────────────────────────────────────
+export type DataConfidence = 'live' | 'estimated' | 'simulated' | 'unavailable';
+
+export interface LabeledValue {
+  label: string;
+  value: string;
+  tone?: 'pass' | 'warning' | 'critical' | 'neutral';
+  sublabel?: string;
+  confidence?: DataConfidence;
+}
+
+export interface VerdictCheckRow {
+  name: string;
+  detail: string;
+  status: 'pass' | 'warning' | 'critical';
+  badge: 'PASS' | 'WARNING' | 'CRITICAL' | 'INFO';
+  confidence: DataConfidence;
+}
+
+export interface VerdictHero {
+  score: number;
+  verdict: 'CLEAN' | 'CAUTION' | 'FLAGGED' | 'TRAP';
+  symbol: string;
+  name: string;
+  mint: string;
+  summary: string;
+}
+
+export interface VerdictViewModel {
+  hero: VerdictHero;
+  safetyLayer: VerdictCheckRow[];
+  marketStructure: VerdictCheckRow[];
+  marketMetrics: LabeledValue[];
+  timingPosition: VerdictCheckRow[];
+}
+
+export interface MirrorLeaderboardRow {
+  wallet: string;
+  walletLabel: string;
+  tag: string | null;
+  totalPnlSol: number;
+  roi: number;
+  holdDisplay: string;
+  entryLine: string;
+  entryMarketCap: number | null;
+  entryTimestamp: number | null;
+  dex: string | null;
+  sizeSol: number | null;
+  tookPartialProfits: boolean;
+  confidence: Partial<Record<'entryMarketCap' | 'dex' | 'hold' | 'entryTiming', DataConfidence>>;
+}
+
+export interface MirrorComparison {
+  yourPnlSol: number;
+  yourEntryLine: string;
+  yourDex: string | null;
+  yourDexConfidence: DataConfidence;
+  winnerPnlSol: number;
+  winnerEntryLine: string;
+  winnerDex: string | null;
+  winnerDexConfidence: DataConfidence;
+  entryTimingGapLabel: string;
+  entryMarketCapGapLabel: string;
+  solGapLabel: string;
+}
+
+export interface MirrorPatternInsights {
+  avgEntryMarketCap: string;
+  avgHoldBeforePartialExit: string;
+  mostUsedDex: string;
+  partialProfitFrequency: string;
+  avgEntryBeforePeak: string;
+  avgSizeDeployed: string;
+}
+
+export interface MirrorViewModel {
+  mint: string;
+  symbol: string;
+  leaderboard: MirrorLeaderboardRow[];
+  yourRow: MirrorLeaderboardRow | null;
+  comparison: MirrorComparison | null;
+  patternInsights: MirrorPatternInsights;
+  comparisonNote: string | null;
+}
+
+export interface WinnerTradeSnapshot {
+  wallet: string;
+  label: string;
+  tag: string | null;
+  totalPnlSol: number;
+  roi: number;
+  entryPrice: number | null;
+  entryMarketCap: number | null;
+  entryTimingLabel: string;
+  deployedSol: number | null;
+  exitTimingLabel: string;
+  dexLabel: string;
+  confidence: Partial<Record<'entryMarketCap' | 'dex' | 'entryTiming' | 'hold', DataConfidence>>;
+}
+
+export interface PayslipTradeCard {
+  id: string;
+  tokenMint: string;
+  tokenSymbol: string;
+  tokenName: string;
+  diagnosis: DiagnosisCode;
+  diagnosisLabel: string;
+  entryTimestamp: number;
+  entryDisplay: string;
+  pnlSol: number;
+  pnlLabel: 'Realized' | 'Unrealized';
+  damageScore: number;
+  winnerHeadline: string;
+  yourTrade: LabeledValue[];
+  topWinner: WinnerTradeSnapshot | null;
+  comparison: {
+    entryTimingGap: string;
+    entryMarketCapGap: string;
+    solGap: string;
+  } | null;
+  narrative: string;
+  wallet: string;
+  source: string;
+  signature: string;
+}
+
+export interface PayslipBanner {
+  title: string;
+  body: string;
+}
+
+export interface PayslipGrades {
+  overall: { grade: string; score: number };
+  entryDiscipline: { grade: string; score: number };
+  exitDiscipline: { grade: string; score: number };
+  sizeManagement: { grade: string; score: number };
+  tokenSelection: { grade: string; score: number };
+}
+
+export interface PayslipSummary {
+  wallet: string;
+  tradesAnalyzed: number;
+  totalPnlSol: number;
+  totalLeftOnTable: number;
+  worstTradePnl: number;
+  avgEntryPercentile: number | null;
+}
+
+export interface PayslipViewModel {
+  wallet: string;
+  grades: PayslipGrades;
+  banner: PayslipBanner | null;
+  summary: PayslipSummary;
+  trades: PayslipTradeCard[];
+}
+
+export interface TradeWinnerSnapshot {
+  address: string;
+  tag: string | null;
+  entryTimestamp: number;
+  totalPnlSOL: number;
+  roi: number;
+  holdTimeMinutes: number | null;
+  entryMarketCap: number | null;
+}
+
 export interface TradeAnalysis {
   tokenMint: string;
   tokenSymbol: string;
@@ -36,17 +198,23 @@ export interface TradeAnalysis {
   solReceived: number | null;
   realizedPnlSOL: number | null;
   unrealizedPnlSOL: number | null;
-  peakPnlSOL: number | null; // what you COULD have made
-  leftOnTable: number | null; // peakPnl - realizedPnl
+  peakPnlSOL: number | null;
+  leftOnTable: number | null;
   diagnosis: DiagnosisCode;
   diagnosisText: string;
-  damageScore: number; // 0-100
-  entryPercentile: string;
+  damageScore: number;
+  entryPercentile: string | null;
   signature: string;
   source: string;
+  topWinner: TradeWinnerSnapshot | null;
+  winnerEntryAdvantageMinutes: number | null;
+  winnerEntryTimestamp: number | null;
+  winnerHoldTimeMinutes: number | null;
+  entryPriceSource: 'birdeye' | 'trades_fallback' | null;
+  peakPriceSource: 'ohlcv' | 'trades_fallback' | null;
+  entryPercentileSource: 'ohlcv' | 'trades_fallback' | null;
 }
 
-// ─── Summary stats across all trades ─────────────────────────────────────
 export interface WalletSummary {
   wallet: string;
   tradesAnalyzed: number;
@@ -58,22 +226,21 @@ export interface WalletSummary {
   avgEntryPercentile: number | null;
 }
 
-// ─── Pattern tax (recurring mistake analysis) ─────────────────────────────
 export interface PatternTax {
   mostCommonMistake: DiagnosisCode | 'UNKNOWN';
   timesRepeated: number;
   totalCostSOL: number;
-  avgLossHoldTimeHours: number;
-  avgWinHoldTimeHours: number;
-  avgWinnerEntryAdvantageMinutes: number; // winners entered X min earlier than you
+  avgLossHoldTimeHours: number | null;
+  avgWinHoldTimeHours: number | null;
+  avgWinnerEntryAdvantageMinutes: number | null;
+  avgWinnerHoldTimeMinutes: number | null;
 }
 
-// ─── Detailed trading grade ────────────────────────────────────────────────
 export interface TradingGrade {
   overall: 'A' | 'B' | 'C' | 'D' | 'F';
-  overallScore: number;    // 0-100
-  entryDiscipline: number; // 0-100: are you buying top of candles?
-  exitDiscipline: number;  // 0-100: are you selling bottoms or early?
-  sizeManagement: number;  // 0-100: are you oversizing losers?
-  tokenSelection: number;  // 0-100: are you picking high-verdict tokens?
+  overallScore: number;
+  entryDiscipline: number;
+  exitDiscipline: number;
+  sizeManagement: number;
+  tokenSelection: number;
 }

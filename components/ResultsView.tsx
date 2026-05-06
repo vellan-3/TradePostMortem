@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import TradeCard from '@/components/TradeCard';
 import ScoreBadge from '@/components/ScoreBadge';
 import { TradeAnalysis, WalletSummary } from '@/types';
+import { fadeUp } from '@/lib/motion';
 
 interface ResultsViewProps {
   wallet: string;
@@ -118,16 +120,31 @@ export default function ResultsView({ wallet, analyses, summary }: ResultsViewPr
           <p>This wallet has no analyzable swap history. Try a different address.</p>
         </div>
       ) : (
-        <div className="trades-list">
+        <motion.div
+          className="trades-list"
+          initial="hidden"
+          animate="visible"
+        >
           {sorted.map((trade, i) => (
-            <TradeCard
-              key={`${trade.tokenMint}-${trade.entryTimestamp}`}
-              trade={trade}
-              rank={i + 1}
-              wallet={wallet}
-            />
+            <motion.div
+              key={[
+                trade.signature,
+                trade.tokenMint,
+                trade.entryTimestamp,
+                trade.exitTimestamp ?? 'open',
+                trade.solSpent.toFixed(6),
+              ].join(':')}
+              variants={fadeUp}
+              custom={i}
+            >
+              <TradeCard
+                trade={trade}
+                rank={i + 1}
+                wallet={wallet}
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* ── Back link ── */}

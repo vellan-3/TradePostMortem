@@ -19,7 +19,7 @@ export async function getDeployerHistory(
         headers: {
           Authorization: `Bearer ${process.env.RUGCHECK_API_KEY ?? ''}`,
         },
-        next: { revalidate: 3600 },
+        cache: 'no-store',
       }
     );
     if (!res.ok) return null;
@@ -39,9 +39,11 @@ export async function getDeployerHistory(
 
 export async function getTokenReport(mint: string) {
   try {
-    // Rugcheck public endpoint — no key required for token report
     const res = await fetch(`${RUGCHECK_BASE}/tokens/${mint}/report`, {
-      next: { revalidate: 300 },
+      headers: process.env.RUGCHECK_API_KEY
+        ? { Authorization: `Bearer ${process.env.RUGCHECK_API_KEY}` }
+        : undefined,
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     return await res.json();

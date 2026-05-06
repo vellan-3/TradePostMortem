@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradePostmortem — Solana Trade Autopsy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060608;
+    --surface: #0d0d12;
+    --surface2: #13131a;
+    --border: #1e1e2e;
+    --border-bright: #2a2a40;
+    --text: #e8e8f0;
+    --muted: #5a5a78;
+    --dim: #2e2e45;
+    --red: #ff3b3b;
+    --red-dim: rgba(255,59,59,0.12);
+    --orange: #ff7b1a;
+    --orange-dim: rgba(255,123,26,0.12);
+    --yellow: #f5c518;
+    --yellow-dim: rgba(245,197,24,0.10);
+    --green: #00d68f;
+    --green-dim: rgba(0,214,143,0.10);
+    --accent: #7c5cfc;
+    --accent-dim: rgba(124,92,252,0.15);
+    --solana: #9945ff;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* ─── NOISE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ─── GRID BACKGROUND ─── */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,92,252,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,92,252,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(6,6,8,0.85);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-logo .dot {
+    width: 7px;
+    height: 7px;
+    background: var(--red);
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .nav-badge {
+    background: var(--accent-dim);
+    border: 1px solid rgba(124,92,252,0.3);
+    color: #a07fff;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ─── SECTIONS ─── */
+  .section {
+    display: none;
+    min-height: 100vh;
+    padding-top: 56px;
+  }
+  .section.active { display: block; }
+
+  /* ════════════════════════════════════════
+     SCREEN 1 — LANDING
+  ════════════════════════════════════════ */
+  #screen-landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 80px 24px 60px;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 28px;
+    animation: fade-up 0.6s ease both;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(48px, 7vw, 88px);
+    line-height: 0.92;
+    letter-spacing: -3px;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 0;
+    animation: fade-up 0.6s 0.1s ease both;
+  }
+
+  .hero-title .strike {
+    color: var(--red);
+    position: relative;
+    display: inline-block;
+  }
+
+  .hero-title .strike::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 3px;
+    background: var(--red);
+    transform: translateY(-50%) rotate(-2deg);
+  }
+
+  .hero-sub {
+    margin-top: 28px;
+    font-size: 15px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 440px;
+    line-height: 1.7;
+    animation: fade-up 0.6s 0.2s ease both;
+  }
+
+  /* ─── WALLET INPUT ─── */
+  .input-wrapper {
+    margin-top: 52px;
+    width: 100%;
+    max-width: 580px;
+    animation: fade-up 0.6s 0.3s ease both;
+  }
+
+  .input-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+    background: var(--surface);
+  }
+
+  .input-row:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .wallet-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 16px 18px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+
+  .wallet-input::placeholder { color: var(--dim); }
+
+  .btn-analyze {
+    background: var(--red);
+    border: none;
+    padding: 16px 28px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .btn-analyze:hover { background: #ff1f1f; }
+  .btn-analyze:active { transform: scale(0.98); }
+
+  /* ─── DEMO WALLETS ─── */
+  .demo-row {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    animation: fade-up 0.6s 0.4s ease both;
+  }
+
+  .demo-label { font-size: 11px; color: var(--muted); }
+
+  .demo-chip {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .demo-chip:hover { color: var(--text); border-color: var(--border-bright); }
+
+  /* ─── STATS ROW ─── */
+  .stats-row {
+    margin-top: 80px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    width: 100%;
+    max-width: 580px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    animation: fade-up 0.6s 0.5s ease both;
+  }
+
+  .stat-cell {
+    padding: 20px 24px;
+    background: var(--surface);
+    text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .stat-cell:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    color: var(--text);
+    letter-spacing: -1px;
+  }
+
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+
+  /* ─── HOW IT WORKS ─── */
+  .how-row {
+    margin-top: 100px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    width: 100%;
+    max-width: 760px;
+    animation: fade-up 0.6s 0.6s ease both;
+  }
+
+  .how-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+  }
+
+  .how-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 36px;
+    color: var(--border-bright);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .how-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .how-text { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ════════════════════════════════════════
+     SCREEN 2 — LOADING
+  ════════════════════════════════════════ */
+  #screen-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 0;
+  }
+
+  .loading-wallet {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 48px;
+  }
+
+  .loading-wallet span { color: var(--text); }
+
+  .loader-block {
+    width: 320px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .loader-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    opacity: 0.3;
+    transition: opacity 0.3s;
+  }
+  .loader-step:last-child { border-bottom: none; }
+  .loader-step.active { opacity: 1; }
+  .loader-step.done { opacity: 0.5; }
+
+  .loader-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-bright);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  .loader-step.active .loader-icon {
+    border-color: var(--accent);
+    animation: spin-border 1s linear infinite;
+  }
+
+  .loader-step.done .loader-icon {
+    background: var(--green);
+    border-color: var(--green);
+    color: #000;
+  }
+
+  @keyframes spin-border {
+    to { border-top-color: transparent; transform: rotate(360deg); }
+  }
+
+  .loader-text { font-size: 13px; color: var(--text); }
+  .loader-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .loading-bar-wrap {
+    margin-top: 32px;
+    width: 320px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .loading-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--red));
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+
+  /* ════════════════════════════════════════
+     SCREEN 3 — RESULTS
+  ════════════════════════════════════════ */
+  #screen-results {
+    padding: 80px 24px 100px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .results-header {
+    margin-bottom: 48px;
+    animation: fade-up 0.5s ease both;
+  }
+
+  .results-wallet-tag {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .results-wallet-tag::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+  }
+
+  .results-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 36px;
+    letter-spacing: -1.5px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .results-title .score-tag {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 3px;
+    margin-left: 14px;
+    vertical-align: middle;
+    letter-spacing: 0;
+  }
+
+  .score-f { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .score-d { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange); }
+  .score-c { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+  .score-b { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+
+  .results-meta {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+  }
+
+  .results-meta span { display: flex; gap: 6px; }
+  .results-meta b { color: var(--text); }
+
+  /* ─── SUMMARY STRIP ─── */
+  .summary-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 40px;
+    animation: fade-up 0.5s 0.1s ease both;
+  }
+
+  .summary-cell {
+    padding: 20px 22px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+  }
+  .summary-cell:last-child { border-right: none; }
+
+  .summary-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .summary-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+
+  .val-red { color: var(--red); }
+  .val-green { color: var(--green); }
+  .val-orange { color: var(--orange); }
+  .val-text { color: var(--text); }
+
+  /* ─── SORT TABS ─── */
+  .sort-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    width: fit-content;
+    animation: fade-up 0.5s 0.15s ease both;
+  }
+
+  .sort-tab {
+    padding: 8px 18px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    background: var(--surface);
+    border: none;
+    transition: background 0.15s, color 0.15s;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .sort-tab.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  /* ─── TRADE CARDS ─── */
+  .trades-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .trade-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    animation: fade-up 0.4s ease both;
+  }
+
+  .trade-card:hover { border-color: var(--border-bright); }
+  .trade-card.expanded { border-color: var(--border-bright); }
+
+  .trade-card-top {
+    display: grid;
+    grid-template-columns: 40px 1fr auto auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  .trade-rank {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    color: var(--dim);
+    text-align: center;
+  }
+
+  .trade-rank.rank-1 { color: var(--red); }
+  .trade-rank.rank-2 { color: var(--orange); }
+  .trade-rank.rank-3 { color: var(--yellow); }
+
+  .trade-info {}
+
+  .trade-token {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .diagnosis-pill {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 400;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  .pill-red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,59,59,0.3); }
+  .pill-orange { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,123,26,0.3); }
+  .pill-yellow { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(245,197,24,0.3); }
+  .pill-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,214,143,0.3); }
+
+  .trade-date { font-size: 11px; color: var(--muted); }
+
+  .trade-pnl {
+    text-align: right;
+  }
+
+  .trade-pnl-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  .trade-pnl-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .trade-dmg {
+    width: 52px;
+    text-align: center;
+  }
+
+  .dmg-ring {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: conic-gradient(var(--red) calc(var(--pct) * 3.6deg), var(--border) 0deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text);
+    position: relative;
+  }
+
+  .dmg-ring::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    background: var(--surface);
+    border-radius: 50%;
+  }
+
+  .dmg-ring span { position: relative; z-index: 1; font-size: 9px; }
+
+  /* ─── EXPANDED DETAIL ─── */
+  .trade-detail {
+    display: none;
+    padding: 0 20px 24px 76px;
+    border-top: 1px solid var(--border);
+  }
+
+  .trade-card.expanded .trade-detail { display: block; }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .detail-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 16px;
+  }
+
+  .detail-box-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .detail-box-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .detail-box-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* ─── DIAGNOSIS TEXT ─── */
+  .diagnosis-block {
+    margin-top: 18px;
+    padding: 14px 18px;
+    border-radius: 3px;
+    font-size: 13px;
+    line-height: 1.7;
+    border-left: 3px solid;
+  }
+
+  .diag-red { background: var(--red-dim); border-color: var(--red); color: #ffaaaa; }
+  .diag-orange { background: var(--orange-dim); border-color: var(--orange); color: #ffcc99; }
+  .diag-yellow { background: var(--yellow-dim); border-color: var(--yellow); color: #ffe999; }
+  .diag-green { background: var(--green-dim); border-color: var(--green); color: #99ffd0; }
+
+  /* ─── OPTIMAL EXIT ─── */
+  .optimal-block {
+    margin-top: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .optimal-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+    padding-top: 1px;
+  }
+
+  /* ─── PRICE BARS ─── */
+  .price-timeline {
+    margin-top: 16px;
+    position: relative;
+    height: 64px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    padding: 10px 16px;
+  }
+
+  .price-bar-track {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 20px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  .price-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--red));
+  }
+
+  .price-marker {
+    position: absolute;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .price-marker-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid var(--bg);
+  }
+
+  .price-marker-label {
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+    position: absolute;
+    top: -16px;
+  }
+
+  /* ─── SHARE BUTTON ─── */
+  .detail-actions {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-share {
+    padding: 9px 20px;
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s, border-color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-share:hover { background: var(--surface2); border-color: var(--accent); color: #a07fff; }
+
+  .btn-share-x {
+    padding: 9px 20px;
+    background: #000;
+    border: 1px solid #333;
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-share-x:hover { background: #111; }
+
+  /* ─── NEW WALLET BTN ─── */
+  .btn-new {
+    margin-top: 48px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .btn-new:hover { color: var(--text); border-color: var(--text); }
+
+  /* ════════════════════════════════════════
+     SCREEN 4 — SHARE CARD MODAL
+  ════════════════════════════════════════ */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    padding: 32px;
+    width: 580px;
+    max-width: 95vw;
+    animation: modal-in 0.25s ease;
+  }
+
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  /* ─── SHARE CARD PREVIEW ─── */
+  .share-card-preview {
+    width: 100%;
+    aspect-ratio: 1.91;
+    background: #060608;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px 28px;
+    position: relative;
+    overflow: hidden;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .share-card-preview::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(rgba(124,92,252,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,92,252,0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .sc-eyebrow {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .sc-diagnosis {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--red);
+    margin-bottom: 6px;
+  }
+
+  .sc-token {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .sc-desc {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.6;
+    max-width: 60%;
+  }
+
+  .sc-pnl {
+    position: absolute;
+    right: 28px;
+    top: 28px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 40px;
+    letter-spacing: -2px;
+    color: var(--red);
+    line-height: 1;
+  }
+
+  .sc-footer {
+    position: absolute;
+    bottom: 16px;
+    left: 28px;
+    right: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: var(--dim);
+  }
+
+  .sc-brand {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .modal-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+  }
+  .modal-close:hover { color: var(--text); }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--muted);
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .empty-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  /* ─── TOASTS ─── */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--surface2);
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 999;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.3s;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- ─── NAV ─── -->
+<nav>
+  <div class="nav-logo">
+    <div class="dot"></div>
+    TradePostmortem
+  </div>
+  <div class="nav-right">
+    <span class="nav-badge">SOLANA</span>
+    <span>Beta</span>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════
+     SCREEN 1: LANDING
+════════════════════════════════════════ -->
+<section id="screen-landing" class="section active">
+  <p class="hero-eyebrow">Solana Trade Autopsy Tool</p>
+
+  <h1 class="hero-title">
+    You <span class="strike">lost</span><br>the trade.
+  </h1>
+
+  <p class="hero-sub">
+    Paste your wallet. We reconstruct every bad swap — the entry percentile, the peak you missed, and the exact SOL you left on the table.
+  </p>
+
+  <div class="input-wrapper">
+    <label class="input-label" for="walletInput">Wallet Address</label>
+    <div class="input-row">
+      <input
+        class="wallet-input"
+        id="walletInput"
+        type="text"
+        placeholder="Enter Solana wallet address..."
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <button class="btn-analyze" onclick="startAnalysis()">Autopsy →</button>
+    </div>
+    <div class="demo-row">
+      <span class="demo-label">Try a demo:</span>
+      <span class="demo-chip" onclick="loadDemo('7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU')">Paper Hands Whale</span>
+      <span class="demo-chip" onclick="loadDemo('DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKH')">Top Buyer</span>
+      <span class="demo-chip" onclick="loadDemo('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM')">Diamond Hands L</span>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-cell">
+      <div class="stat-num">18.4K</div>
+      <div class="stat-label">Wallets Autopsied</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">142K</div>
+      <div class="stat-label">Trades Analyzed</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">94K</div>
+      <div class="stat-label">SOL Left on Table</div>
+    </div>
+  </div>
+
+  <div class="how-row">
+    <div class="how-card">
+      <div class="how-num">01</div>
+      <div class="how-title">Fetch Swaps</div>
+      <div class="how-text">We pull your last 100 swap transactions via Helius Enhanced API — no wallet connection needed.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-num">02</div>
+      <div class="how-title">Price at Time</div>
+      <div class="how-text">Birdeye Historical Price API prices every entry and exit at the exact block timestamp.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-num">03</div>
+      <div class="how-title">Diagnose</div>
+      <div class="how-text">We detect Bought The Top, Paper Hands, Diamond Hands Rekt, and more — ranked by damage.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SCREEN 2: LOADING
+════════════════════════════════════════ -->
+<section id="screen-loading" class="section">
+  <p class="loading-wallet">Analyzing <span id="loading-wallet-display">...</span></p>
+
+  <div class="loader-block">
+    <div class="loader-step active" id="step-1">
+      <div class="loader-icon" id="icon-1">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent)"></div>
+      </div>
+      <div>
+        <div class="loader-text">Fetching swap history</div>
+        <div class="loader-sub">via Helius Enhanced API</div>
+      </div>
+    </div>
+    <div class="loader-step" id="step-2">
+      <div class="loader-icon" id="icon-2">2</div>
+      <div>
+        <div class="loader-text">Pricing each trade</div>
+        <div class="loader-sub">Birdeye historical_price_unix</div>
+      </div>
+    </div>
+    <div class="loader-step" id="step-3">
+      <div class="loader-icon" id="icon-3">3</div>
+      <div>
+        <div class="loader-text">Finding peak exits</div>
+        <div class="loader-sub">OHLCV reconstruction</div>
+      </div>
+    </div>
+    <div class="loader-step" id="step-4">
+      <div class="loader-icon" id="icon-4">4</div>
+      <div>
+        <div class="loader-text">Running diagnostics</div>
+        <div class="loader-sub">Scoring &amp; ranking damage</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-bar-wrap">
+    <div class="loading-bar" id="loading-bar"></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SCREEN 3: RESULTS
+════════════════════════════════════════ -->
+<section id="screen-results" class="section">
+  <div class="results-header">
+    <div class="results-wallet-tag" id="result-wallet-tag">Connected · 9WzDXw...AWWm</div>
+    <h2 class="results-title">
+      Your Trade Autopsy
+      <span class="score-tag score-d" id="overall-score">D+</span>
+    </h2>
+    <div class="results-meta">
+      <span><b id="meta-trades">9</b> trades analyzed</span>
+      <span><b id="meta-losses" style="color:var(--red)">-23.4 SOL</b> total P&amp;L</span>
+      <span><b id="meta-left" style="color:var(--orange)">+61.2 SOL</b> left on table</span>
+    </div>
+  </div>
+
+  <div class="summary-strip">
+    <div class="summary-cell">
+      <div class="summary-label">Worst Trade</div>
+      <div class="summary-val val-red">-14.2 SOL</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-label">Left on Table</div>
+      <div class="summary-val val-orange">+61.2 SOL</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-label">Avg Entry Pct</div>
+      <div class="summary-val val-text">78th</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-label">Damage Score</div>
+      <div class="summary-val val-red">83/100</div>
+    </div>
+  </div>
+
+  <div class="sort-tabs">
+    <button class="sort-tab active">Worst First</button>
+    <button class="sort-tab">Most Recent</button>
+    <button class="sort-tab">Biggest Size</button>
+  </div>
+
+  <div class="trades-list" id="trades-list"></div>
+
+  <button class="btn-new" onclick="goToLanding()">← Analyze another wallet</button>
+</section>
+
+<!-- ════════════════════════════════════════
+     SHARE CARD MODAL
+════════════════════════════════════════ -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">Share Your L</div>
+
+    <div class="share-card-preview" id="share-card-preview">
+      <div class="sc-eyebrow">TRADE AUTOPSY · TRADEPOSTMORTEM.XYZ</div>
+      <div class="sc-diagnosis" id="sc-diagnosis">BOUGHT THE TOP</div>
+      <div class="sc-token" id="sc-token">$BONK · Solana</div>
+      <div class="sc-desc" id="sc-desc">
+        Entered in the 91st percentile of the candle. Token never recovered. Held through a 78% drawdown before cutting.
+      </div>
+      <div class="sc-pnl" id="sc-pnl">-14.2 SOL</div>
+      <div class="sc-footer">
+        <div class="sc-brand">TradePostmortem</div>
+        <div id="sc-wallet-footer">7xKXtg...sAsU · Apr 2026</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-share" onclick="copyLink()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy Link
+      </button>
+      <button class="btn-share-x" onclick="shareToX()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        Post to X
+      </button>
+      <button class="btn-share" onclick="downloadCard()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Save PNG
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════
+   MOCK DATA
+══════════════════════════════════════ */
+const MOCK_TRADES = [
+  {
+    rank: 1,
+    token: '$BONK',
+    mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+    diagnosis: 'BOUGHT_THE_TOP',
+    diagnosisLabel: 'Bought the Top',
+    pillClass: 'pill-red',
+    diagClass: 'diag-red',
+    dmgColor: 'var(--red)',
+    date: 'Apr 14, 2026 · 09:42 UTC',
+    pnl: -14.2,
+    pnlLabel: 'Realized',
+    entryPrice: '$0.00001847',
+    exitPrice: '$0.00000401',
+    peakPrice: '$0.00001902',
+    solSpent: 18.0,
+    solReceived: 3.8,
+    entryPct: '91st percentile',
+    peakGain: '+3.1 SOL',
+    leftTable: '+17.4 SOL',
+    optimalExit: 'Peak occurred 6m after your entry. Selling at peak would have returned +3.1 SOL instead of -14.2 SOL.',
+    diagText: 'You entered in the 91st percentile of the 15m candle — meaning 91% of the candle\'s range was already priced in. Token peaked 6 minutes after your buy and dumped 78% from there. You cut at the worst possible point.',
+    damageScore: 94,
+  },
+  {
+    rank: 2,
+    token: '$WIF',
+    mint: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
+    diagnosis: 'PAPER_HANDS',
+    diagnosisLabel: 'Paper Hands',
+    pillClass: 'pill-yellow',
+    diagClass: 'diag-yellow',
+    dmgColor: 'var(--yellow)',
+    date: 'Apr 11, 2026 · 14:17 UTC',
+    pnl: +2.1,
+    pnlLabel: 'Realized',
+    entryPrice: '$1.42',
+    exitPrice: '$1.61',
+    peakPrice: '$2.34',
+    solSpent: 12.0,
+    solReceived: 14.1,
+    entryPct: '34th percentile',
+    peakGain: '+12.8 SOL',
+    leftTable: '+10.7 SOL',
+    optimalExit: 'You exited +13.4% into the move. Token ran another +45.3% after your sale. Peak exit would have returned +12.8 SOL vs the +2.1 you took.',
+    diagText: 'Solid entry — 34th percentile, near the low of the candle. But you exited after a 13% move. Token continued to +61% before reversing. You left 10.7 SOL on the table by selling early.',
+    damageScore: 71,
+  },
+  {
+    rank: 3,
+    token: '$POPCAT',
+    mint: '7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr',
+    diagnosis: 'DIAMOND_HANDS_REKT',
+    diagnosisLabel: 'Diamond Hands Rekt',
+    pillClass: 'pill-red',
+    diagClass: 'diag-red',
+    dmgColor: 'var(--red)',
+    date: 'Apr 09, 2026 · 22:05 UTC',
+    pnl: -7.8,
+    pnlLabel: 'Realized',
+    entryPrice: '$0.0841',
+    exitPrice: '$0.0329',
+    peakPrice: '$0.1102',
+    solSpent: 10.0,
+    solReceived: 2.2,
+    entryPct: '55th percentile',
+    peakGain: '+3.1 SOL',
+    leftTable: '+10.9 SOL',
+    optimalExit: 'You were +3.1 SOL in profit at the 4h mark. Holding through the reversal cost you 10.9 SOL relative to the optimal exit.',
+    diagText: 'Decent entry but you held through a peak of +31% without taking profit. When the reversal hit, you rode it all the way to -61% from your entry. Classic diamond hands into the dump.',
+    damageScore: 78,
+  },
+  {
+    rank: 4,
+    token: '$JUP',
+    mint: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',
+    diagnosis: 'SOLD_THE_BOTTOM',
+    diagnosisLabel: 'Sold the Bottom',
+    pillClass: 'pill-orange',
+    diagClass: 'diag-orange',
+    dmgColor: 'var(--orange)',
+    date: 'Apr 07, 2026 · 11:33 UTC',
+    pnl: -3.4,
+    pnlLabel: 'Realized',
+    entryPrice: '$0.1720',
+    exitPrice: '$0.1380',
+    peakPrice: '$0.2041',
+    solSpent: 8.0,
+    solReceived: 4.6,
+    entryPct: '62nd percentile',
+    peakGain: '+9.7 SOL',
+    leftTable: '+13.1 SOL',
+    optimalExit: 'You sold at the local low. Token recovered +48% from your exit price within 6 hours.',
+    diagText: 'You exit points placed you at the exact local bottom. Token recovered 48% from your sell price within 6 hours. Holding just 6 more hours would have returned you to breakeven.',
+    damageScore: 58,
+  },
+  {
+    rank: 5,
+    token: '$MEME',
+    mint: 'MeMeMeMeMeMeMeMeMeMeMeMeMeMeMeMeMeMeMeMemeMeMe',
+    diagnosis: 'GOOD_TRADE',
+    diagnosisLabel: 'Good Trade',
+    pillClass: 'pill-green',
+    diagClass: 'diag-green',
+    dmgColor: 'var(--green)',
+    date: 'Apr 05, 2026 · 08:11 UTC',
+    pnl: +5.3,
+    pnlLabel: 'Realized',
+    entryPrice: '$0.00341',
+    exitPrice: '$0.00523',
+    peakPrice: '$0.00561',
+    solSpent: 6.0,
+    solReceived: 11.3,
+    entryPct: '28th percentile',
+    peakGain: '+5.8 SOL',
+    leftTable: '+0.5 SOL',
+    optimalExit: 'You captured 91% of the move. Near-optimal exit.',
+    diagText: 'Clean trade. Low entry percentile, good hold time, exited close to peak. You captured 91% of the available move.',
+    damageScore: 4,
+  },
+];
+
+/* ══════════════════════════════════════
+   SCREEN ROUTING
+══════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goToLanding() {
+  showScreen('screen-landing');
+  document.getElementById('walletInput').value = '';
+}
+
+/* ══════════════════════════════════════
+   DEMO WALLET CHIPS
+══════════════════════════════════════ */
+function loadDemo(addr) {
+  document.getElementById('walletInput').value = addr;
+}
+
+/* ══════════════════════════════════════
+   ANALYSIS FLOW
+══════════════════════════════════════ */
+function startAnalysis() {
+  const wallet = document.getElementById('walletInput').value.trim();
+  if (!wallet || wallet.length < 32) {
+    showToast('Enter a valid Solana wallet address');
+    return;
+  }
+
+  const short = wallet.slice(0, 6) + '...' + wallet.slice(-4);
+  document.getElementById('loading-wallet-display').textContent = short;
+
+  showScreen('screen-loading');
+  runLoadingSequence(() => {
+    buildResultsPage(wallet);
+    showScreen('screen-results');
+  });
+}
+
+function runLoadingSequence(onDone) {
+  const steps = [
+    { id: 1, delay: 0, duration: 1400 },
+    { id: 2, delay: 1400, duration: 1200 },
+    { id: 3, delay: 2600, duration: 900 },
+    { id: 4, delay: 3500, duration: 700 },
+  ];
+  const bar = document.getElementById('loading-bar');
+
+  steps.forEach(({ id, delay, duration }) => {
+    setTimeout(() => {
+      const step = document.getElementById(`step-${id}`);
+      const icon = document.getElementById(`icon-${id}`);
+      step.classList.add('active');
+
+      // update bar
+      const pct = (delay / 4200) * 100;
+      bar.style.width = pct + '%';
+
+      setTimeout(() => {
+        step.classList.remove('active');
+        step.classList.add('done');
+        icon.textContent = '✓';
+        icon.style.background = 'var(--green)';
+        icon.style.borderColor = 'var(--green)';
+        icon.style.color = '#000';
+        icon.style.animation = 'none';
+        bar.style.width = ((delay + duration) / 4200 * 100) + '%';
+      }, duration);
+    }, delay);
+  });
+
+  setTimeout(() => {
+    bar.style.width = '100%';
+    setTimeout(onDone, 300);
+  }, 4400);
+}
+
+/* ══════════════════════════════════════
+   BUILD RESULTS
+══════════════════════════════════════ */
+function buildResultsPage(wallet) {
+  const short = wallet.slice(0, 6) + '...' + wallet.slice(-4);
+  document.getElementById('result-wallet-tag').textContent = 'Analyzed · ' + short;
+
+  const list = document.getElementById('trades-list');
+  list.innerHTML = '';
+
+  MOCK_TRADES.forEach((trade, i) => {
+    const card = buildTradeCard(trade, i);
+    list.appendChild(card);
+  });
+}
+
+function buildTradeCard(trade, index) {
+  const pnlSign = trade.pnl >= 0 ? '+' : '';
+  const pnlColor = trade.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+  const rankClass = ['rank-1','rank-2','rank-3'][trade.rank - 1] || '';
+
+  const card = document.createElement('div');
+  card.className = 'trade-card';
+  card.style.animationDelay = (index * 0.07) + 's';
+
+  card.innerHTML = `
+    <div class="trade-card-top" onclick="toggleCard(this.parentElement)">
+      <div class="trade-rank ${rankClass}">${trade.rank}</div>
+      <div class="trade-info">
+        <div class="trade-token">
+          ${trade.token}
+          <span class="diagnosis-pill ${trade.pillClass}">${trade.diagnosisLabel}</span>
+        </div>
+        <div class="trade-date">${trade.date}</div>
+      </div>
+      <div class="trade-pnl">
+        <div class="trade-pnl-val" style="color:${pnlColor}">${pnlSign}${trade.pnl.toFixed(1)} SOL</div>
+        <div class="trade-pnl-label">${trade.pnlLabel}</div>
+      </div>
+      <div class="trade-dmg">
+        <div class="dmg-ring" style="--pct:${trade.damageScore};background:conic-gradient(${trade.dmgColor} calc(${trade.damageScore} * 3.6deg), var(--border) 0deg)">
+          <span>${trade.damageScore}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="trade-detail">
+      <div class="detail-grid">
+        <div class="detail-box">
+          <div class="detail-box-label">Entry Price</div>
+          <div class="detail-box-val">${trade.entryPrice}</div>
+          <div class="detail-box-sub">${trade.entryPct}</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">Exit Price</div>
+          <div class="detail-box-val">${trade.exitPrice}</div>
+          <div class="detail-box-sub">${pnlSign}${trade.pnl.toFixed(1)} SOL realized</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">Peak After Entry</div>
+          <div class="detail-box-val" style="color:var(--green)">${trade.peakPrice}</div>
+          <div class="detail-box-sub">Could have been ${trade.peakGain}</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">SOL Spent</div>
+          <div class="detail-box-val">${trade.solSpent} SOL</div>
+          <div class="detail-box-sub">Position size</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">SOL Received</div>
+          <div class="detail-box-val" style="color:${pnlColor}">${trade.solReceived} SOL</div>
+          <div class="detail-box-sub">From exit</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-box-label">Left on Table</div>
+          <div class="detail-box-val" style="color:var(--orange)">${trade.leftTable}</div>
+          <div class="detail-box-sub">Peak vs actual</div>
+        </div>
+      </div>
+
+      <div class="diagnosis-block ${trade.diagClass}">
+        ${trade.diagText}
+      </div>
+
+      <div class="optimal-block">
+        <div class="optimal-label">Optimal Exit</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.7">${trade.optimalExit}</div>
+      </div>
+
+      <div class="detail-actions">
+        <button class="btn-share" onclick="openShareModal(${MOCK_TRADES.indexOf(trade)})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share Autopsy Card
+        </button>
+        <button class="btn-share">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          View on Solscan
+        </button>
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
+/* ══════════════════════════════════════
+   CARD TOGGLE
+══════════════════════════════════════ */
+function toggleCard(card) {
+  const wasExpanded = card.classList.contains('expanded');
+  document.querySelectorAll('.trade-card.expanded').forEach(c => c.classList.remove('expanded'));
+  if (!wasExpanded) card.classList.add('expanded');
+}
+
+/* ══════════════════════════════════════
+   SORT TABS
+══════════════════════════════════════ */
+document.querySelectorAll('.sort-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+  });
+});
+
+/* ══════════════════════════════════════
+   SHARE MODAL
+══════════════════════════════════════ */
+function openShareModal(tradeIndex) {
+  const trade = MOCK_TRADES[tradeIndex];
+  document.getElementById('sc-diagnosis').textContent = trade.diagnosisLabel.toUpperCase();
+  document.getElementById('sc-diagnosis').style.color = trade.pnl < 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('sc-token').textContent = trade.token + ' · Solana';
+  document.getElementById('sc-desc').textContent = trade.diagText.slice(0, 120) + '...';
+  const sign = trade.pnl >= 0 ? '+' : '';
+  document.getElementById('sc-pnl').textContent = sign + trade.pnl.toFixed(1) + ' SOL';
+  document.getElementById('sc-pnl').style.color = trade.pnl < 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('share-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('share-modal').classList.remove('open');
+}
+
+document.getElementById('share-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+/* ══════════════════════════════════════
+   SHARE ACTIONS
+══════════════════════════════════════ */
+function copyLink() {
+  navigator.clipboard?.writeText('https://tradepostmortem.xyz/w/demo').catch(() => {});
+  showToast('Link copied to clipboard');
+}
+
+function shareToX() {
+  const text = encodeURIComponent('Just ran my wallet through @tradepostmortem and it diagnosed me with BOUGHT_THE_TOP 3 times in one month 💀\n\nFind out your trade damage: tradepostmortem.xyz');
+  window.open('https://twitter.com/intent/tweet?text=' + text, '_blank');
+}
+
+function downloadCard() {
+  showToast('PNG download coming soon in production build');
+}
+
+/* ══════════════════════════════════════
+   TOAST
+══════════════════════════════════════ */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ══════════════════════════════════════
+   KEYBOARD
+══════════════════════════════════════ */
+document.getElementById('walletInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startAnalysis();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
