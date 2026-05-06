@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLIP — Onchain Trade Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+
+body {
+  background: #000;
+  color: #fff;
+  font-family: 'Instrument Sans', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════
+   NAV
+═══════════════════════════════════════ */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 98px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 64px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.nav-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 40px;
+  letter-spacing: -1px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.nav-logo span { color: #3B82F6; }
+
+.nav-pills {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  pointer-events: all;
+}
+
+.nav-pills a {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.nav-pills a:hover { opacity: 0.7; }
+
+.nav-sep {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: rgba(255,255,255,0.4);
+  pointer-events: none;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  pointer-events: all;
+}
+
+.btn-connect {
+  padding: 20px 32px;
+  background: linear-gradient(180deg, #3B82F6 20%, #234C90 80%);
+  box-shadow:
+    0px 8px 10px -4px rgba(0,0,0,0.5),
+    0px 12px 32px white inset,
+    0px -5px 10px rgba(0,0,0,0.5) inset,
+    0px 6px 12px white inset;
+  border-radius: 18px;
+  border: none;
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-connect:hover { opacity: 0.9; }
+.btn-connect:active { transform: scale(0.98); }
+
+.pill-solana {
+  padding: 12px 20px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(6px);
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  cursor: default;
+}
+
+/* ═══════════════════════════════════════
+   HERO — FULL VIEWPORT WITH BG IMAGE
+═══════════════════════════════════════ */
+.hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 800px;
+  border-radius: 40px;
+  overflow: hidden;
+  border: 2px solid #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 200px;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('SLIP_Website_Background.png');
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0,0,0,0.60) 0%,
+    rgba(0,0,0,0) 25%,
+    rgba(0,0,0,0) 75%,
+    rgba(0,0,0,0.75) 100%
+  );
+  z-index: 1;
+}
+
+.hero-body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  padding: 0 64px;
+}
+
+.hero-eyebrow {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 16px;
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+}
+
+.hero-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: clamp(72px, 9vw, 144px);
+  line-height: 0.9;
+  text-align: center;
+  color: #fff;
+}
+
+.hero-sub {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.44;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  max-width: 698px;
+}
+
+.btn-get-started {
+  margin-top: 40px;
+  height: 72px;
+  padding: 16px 64px;
+  background: linear-gradient(180deg, #3B82F6 20%, #234C90 80%);
+  box-shadow:
+    0px 8px 6px -4px rgba(0,0,0,0.75),
+    0px 48px 48px -6px rgba(0,0,0,0.75),
+    0px 20px 32px white inset,
+    0px -5px 10px rgba(0,0,0,0.5) inset,
+    0px 10px 12px white inset;
+  border-radius: 24px;
+  border: none;
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-get-started:hover { opacity: 0.9; }
+.btn-get-started:active { transform: scale(0.98); }
+
+/* ═══════════════════════════════════════
+   SECTION: HOW IT WORKS INTRO
+═══════════════════════════════════════ */
+.how-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 640px;
+  padding-bottom: 100px;
+  border-bottom: 1.5px solid rgba(255,255,255,0.25);
+  gap: 64px;
+}
+
+.pill-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 24px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 999px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 400;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+.how-title {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 400;
+  font-size: 52px;
+  color: #fff;
+  text-align: center;
+  max-width: 676px;
+  line-height: 1.1;
+}
+
+/* ═══════════════════════════════════════
+   SECTION: FEATURE ROWS
+═══════════════════════════════════════ */
+.features-section {
+  position: relative;
+  padding: 64px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 120px;
+}
+
+/* The white square outline from Figma */
+.features-section::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: min(1280px, 100%);
+  height: 1280px;
+  border: 4px solid #fff;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.feature-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 128px;
+  width: 100%;
+  max-width: 1260px;
+}
+
+/* LEFT: text column */
+.feature-text {
+  width: 489px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 100px;
+}
+
+.feature-header {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.feature-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1.28;
+  width: fit-content;
+}
+
+.badge-verdict { background: rgba(255,50,50,0.20); color: #FF3232; }
+.badge-mirror  { background: rgba(59,130,246,0.25); color: #3B82F6; }
+.badge-payslip { background: rgba(139,92,246,0.25); color: #8B5CF6; }
+
+.feature-title {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 52px;
+  line-height: 1.0;
+  color: #fff;
+}
+
+.feature-desc {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.6);
+}
+
+/* RIGHT: mockup card */
+.feature-mockup {
+  width: 640px;
+  height: 520px;
+  flex-shrink: 0;
+  position: relative;
+  background: linear-gradient(180deg, #000 10%, #1A1A1A 100%);
+  border-radius: 25px;
+  border: 2px solid rgba(255,255,255,0.10);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* placeholder dots */
+.mockup-dots {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.mdot {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* Mockup screenshot placeholder */
+.mockup-img {
+  position: absolute;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.2);
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 1px;
+}
+
+/* Verdict mockup — security checks */
+.mockup-verdict {
+  width: 480px;
+  height: 318px;
+  left: 80px;
+  top: 101px;
+}
+
+/* Mirror mockup — winner board */
+.mockup-mirror {
+  width: 529px;
+  height: 320px;
+  left: 56px;
+  top: 100px;
+}
+
+/* Payslip mockup — autopsy */
+.mockup-payslip {
+  width: 543px;
+  height: 347px;
+  left: 48px;
+  top: 87px;
+}
+
+/* ─── VERDICT MOCKUP CONTENT ─── */
+.vm-inner {
+  width: 100%;
+  height: 100%;
+  background: #0c0c14;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.vm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  font-size: 9px;
+  color: rgba(255,255,255,0.4);
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.vm-score {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 28px;
+  color: #10b981;
+}
+
+.vm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.vm-check:last-child { border-bottom: none; }
+
+.vm-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.vd-pass { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+.vd-fail { background: rgba(255,50,50,0.2);  color: #FF3232; border: 1px solid rgba(255,50,50,0.3); }
+
+.vm-check-text { flex: 1; }
+.vm-check-name { font-size: 11px; font-weight: 600; color: #fff; margin-bottom: 2px; font-family: 'Instrument Sans', sans-serif; }
+.vm-check-sub  { font-size: 9px; color: rgba(255,255,255,0.4); font-family: 'Space Mono', monospace; }
+
+.vm-badge {
+  font-size: 8px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+.vb-pass { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.2); }
+.vb-fail { background: rgba(255,50,50,0.15);  color: #FF3232; border: 1px solid rgba(255,50,50,0.2); }
+
+/* ─── MIRROR MOCKUP CONTENT ─── */
+.mm-inner {
+  width: 100%;
+  height: 100%;
+  background: #0c0c14;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.mm-head {
+  display: grid;
+  grid-template-columns: 24px 1fr 70px 55px;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 8px;
+  color: rgba(255,255,255,0.3);
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 4px;
+}
+
+.mm-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 70px 55px;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  align-items: center;
+}
+
+.mm-row.you { border-left: 2px solid #3B82F6; padding-left: 6px; }
+.mm-row.top { border-left: 2px solid #10b981; padding-left: 6px; }
+
+.mm-rank { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 13px; color: rgba(255,255,255,0.3); text-align: center; }
+.mm-rank.r1 { color: #fbbf24; }
+.mm-rank.r2 { color: #94a3b8; }
+.mm-rank.ryou { color: #8B5CF6; font-size: 10px; }
+
+.mm-addr { font-size: 10px; color: #fff; font-family: 'Space Mono', monospace; }
+.mm-sub  { font-size: 8px; color: rgba(255,255,255,0.3); font-family: 'Instrument Sans', sans-serif; margin-top: 1px; }
+
+.mm-tag {
+  font-size: 7px;
+  padding: 1px 5px;
+  border-radius: 20px;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.mt-smart { background: rgba(16,185,129,0.2); color: #10b981; }
+.mt-you   { background: rgba(139,92,246,0.2); color: #8B5CF6; }
+
+.mm-pnl { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: #10b981; }
+.mm-pnl.neg { color: #FF3232; }
+.mm-hold { font-size: 9px; color: rgba(255,255,255,0.4); font-family: 'Instrument Sans', sans-serif; }
+
+/* ─── PAYSLIP MOCKUP CONTENT ─── */
+.pm-inner {
+  width: 100%;
+  height: 100%;
+  background: #0c0c14;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.pm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pm-token { display: flex; align-items: center; gap: 8px; }
+.pm-symbol { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; }
+.pm-diag-tag {
+  font-size: 8px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(255,50,50,0.15);
+  color: #FF3232;
+  border: 1px solid rgba(255,50,50,0.2);
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+.pm-pnl {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  color: #FF3232;
+  letter-spacing: -0.5px;
+}
+
+.pm-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  flex: 1;
+}
+
+.pm-half {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.pm-half-label {
+  font-size: 7px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  margin-bottom: 8px;
+  font-family: 'Space Mono', monospace;
+}
+
+.pm-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.pm-stat:last-child { border-bottom: none; }
+.pm-stat-key { color: rgba(255,255,255,0.4); font-family: 'Instrument Sans', sans-serif; }
+.pm-stat-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 10px; }
+
+.pm-diagnosis {
+  background: rgba(255,50,50,0.06);
+  border: 1px solid rgba(255,50,50,0.15);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 9px;
+  color: rgba(255,150,150,0.8);
+  font-family: 'Instrument Sans', sans-serif;
+  line-height: 1.5;
+}
+
+.pm-diagnosis b { color: rgba(255,200,200,0.9); }
+
+/* ═══════════════════════════════════════
+   SECTION: WHAT SETS SLIP APART
+═══════════════════════════════════════ */
+.apart-section {
+  padding: 144px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 80px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.apart-img-placeholder {
+  width: 100%;
+  max-width: 1264px;
+  height: 283px;
+  border-radius: 24px;
+  border: 2px solid #fff;
+  background: linear-gradient(135deg, rgba(255,50,50,0.1) 0%, rgba(139,92,246,0.1) 50%, rgba(59,130,246,0.1) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.2);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.apart-header {
+  width: 100%;
+  max-width: 1264px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+.apart-title {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 700;
+  font-size: 48px;
+  line-height: 1.28;
+  color: #fff;
+}
+
+.apart-sub {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1.28;
+  color: rgba(255,255,255,0.7);
+  max-width: 594px;
+}
+
+.apart-cards {
+  display: flex;
+  gap: 64px;
+  width: 100%;
+  max-width: 1264px;
+}
+
+.apart-card {
+  flex: 1;
+  padding: 72px 48px;
+  border-radius: 25px;
+  border: 2px solid #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+}
+
+.apart-card-problem {
+  background: linear-gradient(180deg, rgba(255,255,255,0) 25%, rgba(255,50,50,0.15) 100%);
+}
+
+.apart-card-solution {
+  background: linear-gradient(180deg, rgba(255,255,255,0) 25%, rgba(0,214,138,0.16) 100%);
+}
+
+.apart-card-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.apart-card-label {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.apart-card-title {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.apart-card-desc {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.44;
+  color: rgba(255,255,255,0.6);
+}
+
+.apart-card-items {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 2;
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════
+   SECTION: STATS
+═══════════════════════════════════════ */
+.stats-section {
+  height: 640px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 96px;
+  border-bottom: 1.5px solid rgba(255,255,255,0.25);
+  width: 100%;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  border-radius: 30px;
+}
+
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 52px;
+  line-height: 1.28;
+  color: #fff;
+  text-align: center;
+}
+
+.stat-label {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.28;
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════
+   SECTION: CTA
+═══════════════════════════════════════ */
+.cta-section {
+  height: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 100px;
+  padding: 0 40px;
+}
+
+.cta-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  width: 100%;
+}
+
+.cta-title {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 700;
+  font-size: 52px;
+  line-height: 1.2;
+  color: #fff;
+  text-align: center;
+}
+
+.cta-sub {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+}
+
+.btn-start {
+  height: 80px;
+  padding: 16px 48px;
+  background: linear-gradient(180deg, #3B82F6 20%, #234C90 80%);
+  box-shadow:
+    0px 8px 6px -4px rgba(0,0,0,0.75),
+    0px 48px 48px -6px rgba(0,0,0,0.75),
+    0px 20px 32px white inset,
+    0px -5px 10px rgba(0,0,0,0.5) inset,
+    0px 10px 12px white inset;
+  border-radius: 24px;
+  border: none;
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.28;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-start:hover { opacity: 0.9; }
+.btn-start:active { transform: scale(0.98); }
+
+/* ═══════════════════════════════════════
+   SECTION: FOOTER / SLIP LARGE
+═══════════════════════════════════════ */
+.footer-section {
+  height: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 120px;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Colored glow blobs from Figma */
+.footer-section::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 280px;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 160px;
+  background: #8B5CF6;
+  border-radius: 9999px;
+  filter: blur(240px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.footer-section::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 320px;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 100px;
+  background: #FF3232;
+  border-radius: 9999px;
+  filter: blur(360px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.slip-wordmark {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: clamp(200px, 35vw, 550px);
+  text-transform: uppercase;
+  color: #fff;
+  text-align: center;
+  line-height: 0.85;
+  letter-spacing: -8px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.footer-bar {
+  width: 100%;
+  padding: 0 36px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 60px;
+}
+
+.footer-logo-sq {
+  width: 100px;
+  height: 100px;
+  background: #3B82F6;
+  flex-shrink: 0;
+}
+
+.footer-copy {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  color: rgba(255,255,255,0.5);
+}
+
+.footer-links {
+  display: flex;
+  gap: 48px;
+  opacity: 0.7;
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  padding: 10px;
+}
+
+.footer-link {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 500;
+  font-size: 20px;
+  text-transform: uppercase;
+  color: #fff;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.footer-link:hover { opacity: 0.6; }
+
+/* ═══════════════════════════════════════
+   PAGE WRAPPER
+═══════════════════════════════════════ */
+.page {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+  background: #000;
+}
+
+/* ═══════════════════════════════════════
+   TECH LOGOS STRIP
+═══════════════════════════════════════ */
+.tech-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 80px;
+  padding: 60px 0;
+  opacity: 0.6;
+}
+
+.tech-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.tech-icon {
+  width: 48px;
+  height: 32px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tech-name {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media (max-width: 900px) {
+  nav { padding: 0 24px; height: 70px; }
+  .nav-pills { display: none; }
+  .nav-logo { font-size: 28px; }
+
+  .page { padding: 16px; gap: 48px; }
+
+  .hero { border-radius: 20px; padding-bottom: 80px; }
+  .hero-title { font-size: clamp(48px, 12vw, 96px); }
+  .hero-eyebrow { font-size: 12px; letter-spacing: 8px; }
+  .hero-sub { font-size: 16px; }
+
+  .feature-row { flex-direction: column; gap: 48px; max-width: 100%; }
+  .feature-text { width: 100%; }
+  .feature-mockup { width: 100%; height: 320px; }
+
+  .features-section::before { display: none; }
+
+  .apart-cards { flex-direction: column; }
+  .stats-section { flex-wrap: wrap; height: auto; padding: 80px 24px; gap: 48px; }
+  .cta-title { font-size: 36px; }
+  .slip-wordmark { font-size: clamp(80px, 25vw, 300px); }
+  .footer-bar { flex-direction: column; gap: 48px; }
+  .footer-links { flex-wrap: wrap; gap: 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">SLIP <span>•</span></div>
+
+  <div class="nav-pills">
+    <a href="#verdict">VERDICT</a>
+    <span class="nav-sep">|</span>
+    <a href="#mirror">MIRROR</a>
+    <span class="nav-sep">|</span>
+    <a href="#payslip">PAYSLIP</a>
+  </div>
+
+  <div class="nav-right">
+    <button class="btn-connect" onclick="goToApp()">Connect Wallet</button>
+    <div class="pill-solana">SOLANA</div>
+  </div>
+</nav>
+
+<!-- ══════════ PAGE WRAPPER ══════════ -->
+<div class="page">
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+
+    <div class="hero-body">
+      <p class="hero-eyebrow">Onchain Trade Intelligence</p>
+      <h1 class="hero-title">Your trades.<br>Unfiltered.</h1>
+      <p class="hero-sub">
+        Connect your wallet. SLIP reads your last trades, scores your performance,
+        shows you who won your money and why.
+      </p>
+      <button class="btn-get-started" onclick="goToApp()">Get Started</button>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS INTRO ── -->
+  <section class="how-intro">
+    <div class="pill-label">How it works</div>
+    <h2 class="how-title">Trading Platform that shows you Before, During, After Trade Analyses</h2>
+  </section>
+
+  <!-- ── TECH STRIP ── -->
+  <div class="tech-strip">
+    <div class="tech-item">
+      <div class="tech-icon">
+        <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+          <rect width="24" height="16" rx="3" fill="rgba(255,255,255,0.1)"/>
+          <text x="12" y="11" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="6" font-family="Space Mono">HLS</text>
+        </svg>
+      </div>
+      <span class="tech-name">Helius Tech</span>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">
+        <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+          <rect width="24" height="16" rx="3" fill="rgba(255,255,255,0.1)"/>
+          <text x="12" y="11" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="6" font-family="Space Mono">BRD</text>
+        </svg>
+      </div>
+      <span class="tech-name">BirdEye Tech</span>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">
+        <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
+          <rect width="24" height="16" rx="3" fill="rgba(255,255,255,0.1)"/>
+          <text x="12" y="11" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="6" font-family="Space Mono">DXS</text>
+        </svg>
+      </div>
+      <span class="tech-name">Dexscreener Tech</span>
+    </div>
+  </div>
+
+  <!-- ── FEATURE ROWS ── -->
+  <section class="features-section">
+
+    <!-- VERDICT -->
+    <div class="feature-row" id="verdict">
+      <div class="feature-text">
+        <div class="feature-header">
+          <span class="feature-badge badge-verdict">VERDICT</span>
+          <h3 class="feature-title">Before The Trade</h3>
+        </div>
+        <p class="feature-desc">
+          Full token safety and market structure scan.<br>
+          Mint authority, LP lock, transfer hooks, deployer history, holder concentration, timing position.<br>
+          One score. One verdict.
+        </p>
+      </div>
+
+      <div class="feature-mockup">
+        <div class="mockup-img mockup-verdict">
+          <div class="vm-inner">
+            <div class="vm-header">
+              <span>VERDICT SCORE</span>
+              <span class="vm-score">88</span>
+            </div>
+            <div class="vm-check">
+              <div class="vm-dot vd-pass">✓</div>
+              <div class="vm-check-text">
+                <div class="vm-check-name">Mint Authority</div>
+                <div class="vm-check-sub">Disabled. Supply is fixed.</div>
+              </div>
+              <span class="vm-badge vb-pass">PASS</span>
+            </div>
+            <div class="vm-check">
+              <div class="vm-dot vd-pass">✓</div>
+              <div class="vm-check-text">
+                <div class="vm-check-name">Freeze Authority</div>
+                <div class="vm-check-sub">No freeze authority.</div>
+              </div>
+              <span class="vm-badge vb-pass">PASS</span>
+            </div>
+            <div class="vm-check">
+              <div class="vm-dot vd-fail">✕</div>
+              <div class="vm-check-text">
+                <div class="vm-check-name">Liquidity Lock</div>
+                <div class="vm-check-sub">LP is NOT locked. High rug risk.</div>
+              </div>
+              <span class="vm-badge vb-fail">CRITICAL</span>
+            </div>
+            <div class="vm-check">
+              <div class="vm-dot vd-pass">✓</div>
+              <div class="vm-check-text">
+                <div class="vm-check-name">Transfer Hook</div>
+                <div class="vm-check-sub">No custom hooks. Sells execute normally.</div>
+              </div>
+              <span class="vm-badge vb-pass">PASS</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mockup-dots">
+          <div class="mdot" style="opacity:.8"></div>
+          <div class="mdot" style="opacity:.3"></div>
+          <div class="mdot" style="opacity:.3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIRROR -->
+    <div class="feature-row" id="mirror">
+      <div class="feature-text">
+        <div class="feature-header">
+          <span class="feature-badge badge-mirror">MIRROR</span>
+          <h3 class="feature-title">During the trade</h3>
+        </div>
+        <p class="feature-desc">
+          Every wallet winning on your token right now, ranked by SOL gained.<br>
+          See who entered earlier, with more size, and why they're up while you're not.<br>
+          The gap, explained.
+        </p>
+      </div>
+
+      <div class="feature-mockup">
+        <div class="mockup-img mockup-mirror">
+          <div class="mm-inner">
+            <div class="mm-head">
+              <span>#</span><span>WALLET</span><span>P&amp;L</span><span>HOLD</span>
+            </div>
+            <div class="mm-row top">
+              <div class="mm-rank r1">1</div>
+              <div>
+                <div class="mm-addr">7xKX...sAsU<span class="mm-tag mt-smart">Smart</span></div>
+                <div class="mm-sub">$41k mcap · 2h 32m before you</div>
+              </div>
+              <div class="mm-pnl">+214.8</div>
+              <div class="mm-hold">3h 42m</div>
+            </div>
+            <div class="mm-row">
+              <div class="mm-rank r2">2</div>
+              <div>
+                <div class="mm-addr">3pQR...mN7x</div>
+                <div class="mm-sub">$58k mcap · 3h 20m before you</div>
+              </div>
+              <div class="mm-pnl">+88.3</div>
+              <div class="mm-hold">2h 55m</div>
+            </div>
+            <div class="mm-row">
+              <div class="mm-rank">3</div>
+              <div>
+                <div class="mm-addr">9fBc...w2Yz</div>
+                <div class="mm-sub">$63k mcap · 3h 10m before you</div>
+              </div>
+              <div class="mm-pnl">+61.2</div>
+              <div class="mm-hold">Partial</div>
+            </div>
+            <div class="mm-row">
+              <div class="mm-rank">4</div>
+              <div>
+                <div class="mm-addr">DmNk...p9Xc</div>
+                <div class="mm-sub">$120k mcap · 2h 30m before</div>
+              </div>
+              <div class="mm-pnl">+22.4</div>
+              <div class="mm-hold">Still in</div>
+            </div>
+            <div class="mm-row you">
+              <div class="mm-rank ryou">YOU</div>
+              <div>
+                <div class="mm-addr">YrWz...k4Pm<span class="mm-tag mt-you">You</span></div>
+                <div class="mm-sub">$240k mcap · PUMP_SWAP</div>
+              </div>
+              <div class="mm-pnl neg">-14.2</div>
+              <div class="mm-hold">Exited</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mockup-dots">
+          <div class="mdot" style="opacity:.3"></div>
+          <div class="mdot" style="opacity:.8"></div>
+          <div class="mdot" style="opacity:.3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYSLIP -->
+    <div class="feature-row" id="payslip">
+      <div class="feature-text">
+        <div class="feature-header">
+          <span class="feature-badge badge-payslip">PAYSLIP</span>
+          <h3 class="feature-title">After the trade</h3>
+        </div>
+        <p class="feature-desc">
+          Your full trade autopsy. Entry percentile, peak missed, SOL left on table.<br>
+          Who won the most on each token. Your recurring mistakes.<br>
+          Your trading grade, broken down.
+        </p>
+      </div>
+
+      <div class="feature-mockup">
+        <div class="mockup-img mockup-payslip">
+          <div class="pm-inner">
+            <div class="pm-header">
+              <div class="pm-token">
+                <span class="pm-symbol">$BONK</span>
+                <span class="pm-diag-tag">BOUGHT THE TOP</span>
+              </div>
+              <div class="pm-pnl">-14.2 SOL</div>
+            </div>
+            <div class="pm-split">
+              <div class="pm-half">
+                <div class="pm-half-label">◉ YOUR TRADE</div>
+                <div class="pm-stat">
+                  <span class="pm-stat-key">Entry Price</span>
+                  <span class="pm-stat-val">$0.0000185</span>
+                </div>
+                <div class="pm-stat">
+                  <span class="pm-stat-key">Entry %tile</span>
+                  <span class="pm-stat-val" style="color:#FF3232">91st</span>
+                </div>
+                <div class="pm-stat">
+                  <span class="pm-stat-key">Peak After</span>
+                  <span class="pm-stat-val" style="color:#10b981">$0.0000190</span>
+                </div>
+                <div class="pm-stat">
+                  <span class="pm-stat-key">Left on Table</span>
+                  <span class="pm-stat-val" style="color:#f59e0b">+17.4 SOL</span>
+                </div>
+              </div>
+              <div class="pm-half">
+                <div class="pm-half-label">◈ TOP WINNER</div>
+                <div class="pm-stat">
+                  <span class="pm-stat-key">Entry Mcap</span>
+                  <span class="pm-stat-val" style="color:#10b981">$41k</span>
+                </div>
+                <div class="pm-stat">
+                  <span class="pm-stat-key">Timing</span>
+                  <span class="pm-stat-val" style="color:#10b981">2h 32m earlier</span>
+                </div>
+                <div class="pm-stat">
+                  <span class="pm-stat-key">Total P&amp;L</span>
+                  <span class="pm-stat-val" style="color:#10b981">+214.8 SOL</span>
+                </div>
+                <div class="pm-stat">
+                  <span class="pm-stat-key">DEX Used</span>
+                  <span class="pm-stat-val">Raydium</span>
+                </div>
+              </div>
+            </div>
+            <div class="pm-diagnosis">
+              <b>Why they won:</b> Same token, same size. Winner entered 2h 32m before you at $41k mcap. You were their exit liquidity.
+            </div>
+          </div>
+        </div>
+
+        <div class="mockup-dots">
+          <div class="mdot" style="opacity:.3"></div>
+          <div class="mdot" style="opacity:.3"></div>
+          <div class="mdot" style="opacity:.8"></div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── WHAT SETS SLIP APART ── -->
+  <section style="display:flex;flex-direction:column;align-items:center;padding:0 0 80px;">
+    <div class="apart-section">
+
+      <div class="apart-img-placeholder">
+        <!-- Replace with a real screenshot or product image -->
+        PRODUCT SCREENSHOT
+      </div>
+
+      <div class="apart-header">
+        <h2 class="apart-title">What sets SLIP apart</h2>
+        <p class="apart-sub">Not a scanner. Not a leaderboard. A complete diagnosis of where your edge went and who actually has it.</p>
+      </div>
+
+      <div class="apart-cards">
+        <div class="apart-card apart-card-problem">
+          <div class="apart-card-inner">
+            <div class="apart-card-label">THE PROBLEM</div>
+            <div class="apart-card-title">You lose. Then what?</div>
+            <div class="apart-card-desc">You check Solscan. You see your transaction. You see the price. You see your loss. That's it. No one tells you why. No one shows you the winners. No one explains the pattern.</div>
+          </div>
+          <div class="apart-card-items">
+            Losing feels random<br>
+            No context on who won<br>
+            No pattern recognition
+          </div>
+        </div>
+
+        <div class="apart-card apart-card-solution">
+          <div class="apart-card-inner">
+            <div class="apart-card-label">THE SLIP DIFFERENCE</div>
+            <div class="apart-card-title">Loss with understanding</div>
+            <div class="apart-card-desc">SLIP shows you the exact wallet that took your money, how much they made, why they won, and what they did different. Then it finds the pattern across your losses and quantifies the cost.</div>
+          </div>
+          <div class="apart-card-items">
+            Loss diagnosis instead of confusion<br>
+            Winner leaderboard on every token<br>
+            Recurring mistake quantified
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── STATS ── -->
+  <section class="stats-section">
+    <div class="stat-item">
+      <div class="stat-num">24.1K</div>
+      <div class="stat-label">Wallets Analyzed</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">218K</div>
+      <div class="stat-label">Trades Autopsied</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">141K</div>
+      <div class="stat-label">SOL Left on Table</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">9.4K</div>
+      <div class="stat-label">Tokens Scanned</div>
+    </div>
+  </section>
+
+  <!-- ── CTA ── -->
+  <section class="cta-section">
+    <div class="cta-text">
+      <h2 class="cta-title">See your Trades from a different angle.<br>Understand who won and why.</h2>
+      <p class="cta-sub">Stop guessing why you lost.</p>
+    </div>
+    <button class="btn-start" onclick="goToApp()">Start Analyzing</button>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <section class="footer-section">
+    <div class="slip-wordmark">SLIP</div>
+
+    <div class="footer-bar">
+      <div class="footer-left">
+        <div class="footer-logo-sq"></div>
+        <div class="footer-copy">@2026 SLIP is built for solana traders.</div>
+      </div>
+
+      <div class="footer-links">
+        <div class="footer-col">
+          <a href="#verdict" class="footer-link">Verdict</a>
+          <a href="#mirror" class="footer-link">Mirror</a>
+          <a href="#payslip" class="footer-link">PaySlip</a>
+        </div>
+        <div class="footer-col">
+          <a href="#" class="footer-link">Twitter</a>
+          <a href="#" class="footer-link">Telegram</a>
+          <a href="#" class="footer-link">Discord</a>
+        </div>
+        <div class="footer-col">
+          <a href="#" class="footer-link">Docs</a>
+          <a href="#" class="footer-link">About us</a>
+          <a href="#" class="footer-link">Contact</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /page -->
+
+<script>
+function goToApp() {
+  // Change to your app URL
+  window.location.href = '/app';
+}
+</script>
+</body>
+</html>

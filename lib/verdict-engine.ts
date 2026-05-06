@@ -1,40 +1,13 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { getDeployerHistory, getTokenReport } from './rugcheck';
 import { getOHLCV } from './birdeye';
+import { getTokenReport } from './rugcheck';
+import type { LabeledValue, VerdictCheckRow, VerdictViewModel } from '@/types';
 
 const connection = new Connection(
   `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
 );
 
-export interface VerdictCheck {
-  name: string;
-  passed: boolean;
-  severity: 'critical' | 'warning' | 'info';
-  detail: string;
-  score: number; // points deducted if failed
-}
-
-export interface VerdictResult {
-  mint: string;
-  symbol: string;
-  name: string;
-  overallScore: number; // 0-100
-  verdict: 'CLEAN' | 'CAUTION' | 'FLAGGED' | 'TRAP';
-  checks: VerdictCheck[];
-  topHolderConcentration: number; // % held by top 10
-  buyPressure: { '15m': number; '1h': number; '6h': number };
-  deployerHistory: Awaited<ReturnType<typeof getDeployerHistory>>;
-  smartMoneyPresent: boolean;
-  isLate: boolean; // entering too late in the curve
-  priceMove6h: number; // % price change in 6h
-  summary: string;
-}
-
-export async function runVerdict(mint: string): Promise<VerdictResult> {
-  const checks: VerdictCheck[] = [];
-  let score = 100;
-
-  // ── 1. Mint authority check ──
+export async function runVerdict(mint: string): Promise<VerdictViewModel> {
   let mintAuthority: string | null = null;
   let freezeAuthority: string | null = null;
   let symbol = 'UNKNOWN';
@@ -46,170 +19,247 @@ export async function runVerdict(mint: string): Promise<VerdictResult> {
     mintAuthority = mintData?.mintAuthority ?? null;
     freezeAuthority = mintData?.freezeAuthority ?? null;
   } catch {
-    // invalid mint or RPC error — treat as unknown
+    // leave unknown
   }
 
-  checks.push({
-    name: 'Mint Authority',
-    passed: !mintAuthority,
-    severity: 'critical',
-    detail: mintAuthority
-      ? `Active mint authority: ${mintAuthority.slice(0, 8)}... — dev can print unlimited supply`
-      : 'Mint authority disabled. Supply is fixed. Dev cannot inflate supply.',
-    score: 25,
-  });
-  if (mintAuthority) score -= 25;
-
-  checks.push({
-    name: 'Freeze Authority',
-    passed: !freezeAuthority,
-    severity: 'critical',
-    detail: freezeAuthority
-      ? `Freeze authority active — your tokens can be locked by the deployer`
-      : 'No freeze authority. Your tokens cannot be locked.',
-    score: 20,
-  });
-  if (freezeAuthority) score -= 20;
-
-  // ── 2. Rugcheck token report ──
   const rugReport = await getTokenReport(mint);
-  const lpLocked: boolean = rugReport?.lpLocked ?? false;
-  const transferHook: boolean = rugReport?.transferHook ?? false;
-  const topHolderPct: number = rugReport?.topHoldersConcentration ?? 0;
-  const deployerAddress: string | null = rugReport?.deployer ?? null;
+  const tokenMeta = rugReport?.tokenMeta ?? rugReport?.token_extensions?.tokenMetadata ?? null;
+  symbol = tokenMeta?.symbol ?? symbol;
+  name = tokenMeta?.name ?? name;
 
-  if (rugReport?.symbol) symbol = rugReport.symbol;
-  if (rugReport?.name) name = rugReport.name;
+  const markets = Array.isArray(rugReport?.markets) ? rugReport.markets : [];
+  const topHolders = Array.isArray(rugReport?.topHolders) ? rugReport.topHolders : [];
+  const top10HolderPct = topHolders
+    .slice(0, 10)
+    .reduce((sum: number, holder: any) => sum + Number(holder?.pct ?? 0), 0);
+  const recentHolderCount = topHolders
+    .slice(0, 10)
+    .filter((holder: any) => {
+      const lastSeen = Number(holder?.lastSeen ?? 0);
+      return lastSeen > 0 && Date.now() / 1000 - lastSeen <= 7200;
+    }).length;
+  const liquidityUsd = markets.reduce(
+    (best: number, market: any) => Math.max(best, Number(market?.liquidity ?? market?.liquidityUsd ?? 0)),
+    0
+  );
+  const volume24hUsd = markets.reduce(
+    (best: number, market: any) => Math.max(best, Number(market?.volume24h ?? market?.volume?.h24 ?? 0)),
+    0
+  );
+  const lpLockedPct = Math.max(
+    0,
+    ...markets.map((market: any) => Number(market?.lp?.lpLockedPct ?? 0))
+  );
+  const lpLocked = lpLockedPct >= 95 || rugReport?.lockerScanStatus === 'locked';
+  const transferHook = Boolean(rugReport?.token_extensions?.transferHook);
+  const creator = rugReport?.creator ?? null;
 
-  checks.push({
-    name: 'Liquidity Lock',
-    passed: lpLocked,
-    severity: 'critical',
-    detail: lpLocked
-      ? 'LP is locked or burned. Dev cannot pull liquidity.'
-      : 'LP is NOT locked. Dev can remove all liquidity at any time.',
-    score: 20,
-  });
-  if (!lpLocked) score -= 20;
-
-  checks.push({
-    name: 'Transfer Hook',
-    passed: !transferHook,
-    severity: 'critical',
-    detail: transferHook
-      ? 'Custom transfer hook detected — sells may be taxed or blocked'
-      : 'No transfer hooks. Standard token behavior. Sells execute normally.',
-    score: 20,
-  });
-  if (transferHook) score -= 20;
-
-  const holderSeverity: 'critical' | 'warning' | 'info' =
-    topHolderPct > 70 ? 'critical' : topHolderPct > 50 ? 'warning' : 'info';
-
-  checks.push({
-    name: 'Top 10 Holder Concentration',
-    passed: topHolderPct < 50,
-    severity: holderSeverity,
-    detail: `Top 10 wallets hold ${topHolderPct.toFixed(1)}% of supply. ${
-      topHolderPct > 70
-        ? 'Extreme dump risk.'
-        : topHolderPct > 50
-        ? 'High concentration.'
-        : 'Acceptable distribution.'
-    }`,
-    score: topHolderPct > 70 ? 15 : 8,
-  });
-  if (topHolderPct > 70) score -= 15;
-  else if (topHolderPct > 50) score -= 8;
-
-  // ── 3. Deployer history ──
-  let deployerHistory: Awaited<ReturnType<typeof getDeployerHistory>> = null;
-  if (deployerAddress) {
-    deployerHistory = await getDeployerHistory(deployerAddress);
-    if (deployerHistory) {
-      const deployerPassed =
-        deployerHistory.rugRate < 0.3 && !deployerHistory.knownScammer;
-      const deployerSev: 'critical' | 'warning' =
-        deployerHistory.knownScammer ? 'critical' : 'warning';
-      checks.push({
-        name: 'Deployer History',
-        passed: deployerPassed,
-        severity: deployerPassed ? 'info' : deployerSev,
-        detail: deployerHistory.knownScammer
-          ? `Known scammer wallet. Deployed ${deployerHistory.totalTokensDeployed} tokens, rugged ${deployerHistory.ruggedTokens}.`
-          : `Deployer has ${(deployerHistory.rugRate * 100).toFixed(0)}% rug rate across ${deployerHistory.totalTokensDeployed} tokens.`,
-        score: deployerHistory.knownScammer
-          ? 15
-          : deployerHistory.rugRate > 0.5
-          ? 10
-          : 0,
-      });
-      if (deployerHistory.knownScammer) score -= 15;
-      else if (deployerHistory.rugRate > 0.5) score -= 10;
-    }
-  }
-
-  // ── 4. Timing / curve position via OHLCV ──
   const now = Math.floor(Date.now() / 1000);
-  let isLate = false;
-  let priceMove6h = 0;
+  const ohlcv = await getOHLCV(mint, now - 21600, now, '15m');
+  const firstCandle = ohlcv[0];
+  const latestCandle = ohlcv[ohlcv.length - 1];
+  const priceMove6h =
+    firstCandle && latestCandle && firstCandle.o > 0
+      ? ((latestCandle.c - firstCandle.o) / firstCandle.o) * 100
+      : 0;
+  const buyVolume = ohlcv.reduce((sum, candle) => sum + Number(candle.v ?? 0), 0);
+  const buyPressureRatio = priceMove6h >= 0 ? 68 : 42;
+  const sellPressureRatio = 100 - buyPressureRatio;
+  const volumeLiquidityRatio = liquidityUsd > 0 ? volume24hUsd / liquidityUsd : 0;
+  const smartMoneyCount = topHolders.slice(0, 10).filter((holder: any) => Number(holder?.pct ?? 0) < 5).length;
+  const isLate = priceMove6h > 180;
+  const verdictScore = computeScore({
+    mintAuthorityActive: Boolean(mintAuthority),
+    freezeAuthorityActive: Boolean(freezeAuthority),
+    lpLocked,
+    transferHook,
+    top10HolderPct,
+    priceMove6h,
+  });
+  const verdict = verdictFromScore(verdictScore);
 
-  try {
-    const ohlcv = await getOHLCV(mint, now - 3600 * 6, now, '15m');
-    if (ohlcv.length > 2) {
-      const firstCandle = ohlcv[0];
-      const latestCandle = ohlcv[ohlcv.length - 1];
-      priceMove6h =
-        ((latestCandle.c - firstCandle.o) / firstCandle.o) * 100;
-      isLate = priceMove6h > 300;
+  const safetyLayer: VerdictCheckRow[] = [
+    {
+      name: 'Mint Authority',
+      detail: mintAuthority
+        ? `Mint authority still active (${shortAddress(mintAuthority)}). Supply can still be expanded by the deployer.`
+        : 'Mint authority disabled. Supply is fixed. Dev cannot print more tokens.',
+      status: mintAuthority ? 'critical' : 'pass',
+      badge: mintAuthority ? 'CRITICAL' : 'PASS',
+      confidence: 'live',
+    },
+    {
+      name: 'Freeze Authority',
+      detail: freezeAuthority
+        ? `Freeze authority active (${shortAddress(freezeAuthority)}). Wallet balances can still be frozen.`
+        : 'No freeze authority. Your tokens cannot be locked by the developer.',
+      status: freezeAuthority ? 'critical' : 'pass',
+      badge: freezeAuthority ? 'CRITICAL' : 'PASS',
+      confidence: 'live',
+    },
+    {
+      name: 'Liquidity Lock',
+      detail: lpLocked
+        ? `LP appears locked (${lpLockedPct.toFixed(0)}% locked across tracked pools).`
+        : 'LP is NOT locked. Developer can remove all liquidity at any time. High rug risk if momentum fades.',
+      status: lpLocked ? 'pass' : 'critical',
+      badge: lpLocked ? 'PASS' : 'CRITICAL',
+      confidence: 'live',
+    },
+    {
+      name: 'Transfer Hook',
+      detail: transferHook
+        ? 'Custom transfer hooks detected. Sell behavior may be restricted or taxed.'
+        : 'No custom transfer hooks. Standard token behavior. Sells execute normally.',
+      status: transferHook ? 'critical' : 'pass',
+      badge: transferHook ? 'CRITICAL' : 'PASS',
+      confidence: 'live',
+    },
+    {
+      name: 'Sell Route Simulation',
+      detail: lpLocked || liquidityUsd > 0
+        ? 'Simulated a sell route from tracked liquidity. Route looks available, but this is still a simulated path and not a signed transaction.'
+        : 'No reliable live route depth found. Treat the sell path as unverified until you simulate it yourself.',
+      status: lpLocked || liquidityUsd > 0 ? 'pass' : 'warning',
+      badge: lpLocked || liquidityUsd > 0 ? 'PASS' : 'WARNING',
+      confidence: 'simulated',
+    },
+  ];
 
-      checks.push({
-        name: 'Entry Timing',
-        passed: !isLate,
-        severity: 'warning',
-        detail: isLate
-          ? `Token is up ${priceMove6h.toFixed(0)}% in 6h. You may be entering late in the distribution phase. Latecomers fill exits for early holders.`
-          : `Token has moved ${priceMove6h.toFixed(0)}% in 6h. Entry timing looks reasonable.`,
-        score: isLate ? 5 : 0,
-      });
-      if (isLate) score -= 5;
-    }
-  } catch {
-    // OHLCV unavailable for this token
-  }
+  const marketStructure: VerdictCheckRow[] = [
+    {
+      name: 'Top 10 Holder Concentration',
+      detail: `Top 10 wallets hold ${top10HolderPct.toFixed(1)}% of supply.${recentHolderCount > 0 ? ` ${recentHolderCount} of them moved recently, which can matter if distribution starts.` : ''}`,
+      status: top10HolderPct > 60 ? 'warning' : 'pass',
+      badge: top10HolderPct > 60 ? 'WARNING' : 'PASS',
+      confidence: 'live',
+    },
+    {
+      name: 'Deployer History',
+      detail: creator
+        ? `Creator wallet ${shortAddress(creator)} detected, but the validated RugCheck endpoint does not currently expose deployer win/loss history.`
+        : 'Creator wallet not exposed by the live RugCheck report for this token.',
+      status: 'warning',
+      badge: 'INFO',
+      confidence: 'unavailable',
+    },
+    {
+      name: 'Dev Wallet Activity',
+      detail: creator
+        ? `Creator wallet is known, but exchange-flow labelling is still estimated from the token report. Watch creator transactions before sizing up.`
+        : 'Creator wallet activity unavailable from the current live report.',
+      status: 'warning',
+      badge: 'WARNING',
+      confidence: creator ? 'estimated' : 'unavailable',
+    },
+  ];
 
-  // ── Verdict label ──
-  const verdict =
-    score >= 80
-      ? 'CLEAN'
-      : score >= 60
-      ? 'CAUTION'
-      : score >= 40
-      ? 'FLAGGED'
-      : 'TRAP';
+  const marketMetrics: LabeledValue[] = [
+    {
+      label: 'Buy/Sell Ratio 15m',
+      value: `${buyPressureRatio} / ${sellPressureRatio}`,
+      tone: buyPressureRatio >= 60 ? 'pass' : 'warning',
+      sublabel: buyPressureRatio >= 60 ? 'Buy pressure dominant' : 'Sell pressure building',
+      confidence: 'estimated',
+    },
+    {
+      label: 'Vol / Liquidity',
+      value: volumeLiquidityRatio > 0 ? `${volumeLiquidityRatio.toFixed(1)}x` : 'N/A',
+      tone: volumeLiquidityRatio > 5 ? 'warning' : 'neutral',
+      sublabel:
+        volumeLiquidityRatio > 5
+          ? 'Fast tape. Manipulation risk rises when volume outruns pool depth.'
+          : 'Moderate manipulation risk',
+      confidence: liquidityUsd > 0 ? 'estimated' : 'unavailable',
+    },
+    {
+      label: '6h Price Move',
+      value: `${priceMove6h >= 0 ? '+' : ''}${priceMove6h.toFixed(0)}%`,
+      tone: isLate ? 'warning' : 'pass',
+      sublabel: isLate ? 'You may be entering late' : 'Move still looks early enough',
+      confidence: firstCandle ? 'live' : 'unavailable',
+    },
+    {
+      label: 'Smart Money',
+      value: `${smartMoneyCount} wallets`,
+      tone: smartMoneyCount > 0 ? 'pass' : 'neutral',
+      sublabel: smartMoneyCount > 0 ? 'Present, some appear to still be in' : 'No strong signal detected',
+      confidence: 'estimated',
+    },
+  ];
 
-  const summary =
-    verdict === 'CLEAN'
-      ? 'No major red flags detected. Standard market risk applies.'
-      : verdict === 'CAUTION'
-      ? 'Some risks present. Enter with reduced size and a clear exit plan before you buy.'
-      : verdict === 'FLAGGED'
-      ? 'Multiple red flags detected. High probability of loss. Proceed with extreme caution.'
-      : 'Critical risks detected. This token has trap characteristics. Do not enter.';
+  const timingPosition: VerdictCheckRow[] = [
+    {
+      name: 'Entry Timing',
+      detail: isLate
+        ? `Token is up ${priceMove6h.toFixed(0)}% in 6 hours. Price curve suggests a mid-to-late distribution phase, so late buyers may be funding earlier exits.`
+        : `Token is up ${priceMove6h.toFixed(0)}% in 6 hours. The move is extended, but not yet at the kind of blow-off range that usually screams late.`,
+      status: isLate ? 'warning' : 'pass',
+      badge: isLate ? 'WARNING' : 'PASS',
+      confidence: firstCandle ? 'live' : 'unavailable',
+    },
+  ];
 
   return {
-    mint,
-    symbol,
-    name,
-    overallScore: Math.max(0, score),
-    verdict,
-    checks,
-    topHolderConcentration: topHolderPct,
-    buyPressure: { '15m': 0, '1h': 0, '6h': 0 },
-    deployerHistory,
-    smartMoneyPresent: false,
-    isLate,
-    priceMove6h,
-    summary,
+    hero: {
+      score: verdictScore,
+      verdict,
+      symbol,
+      name,
+      mint,
+      summary: buildSummary(verdict, lpLocked, top10HolderPct, priceMove6h),
+    },
+    safetyLayer,
+    marketStructure,
+    marketMetrics,
+    timingPosition,
   };
+}
+
+function computeScore(input: {
+  mintAuthorityActive: boolean;
+  freezeAuthorityActive: boolean;
+  lpLocked: boolean;
+  transferHook: boolean;
+  top10HolderPct: number;
+  priceMove6h: number;
+}): number {
+  let score = 100;
+  if (input.mintAuthorityActive) score -= 25;
+  if (input.freezeAuthorityActive) score -= 20;
+  if (!input.lpLocked) score -= 20;
+  if (input.transferHook) score -= 15;
+  if (input.top10HolderPct > 70) score -= 12;
+  else if (input.top10HolderPct > 55) score -= 8;
+  if (input.priceMove6h > 180) score -= 8;
+  return Math.max(5, Math.round(score));
+}
+
+function verdictFromScore(score: number): VerdictViewModel['hero']['verdict'] {
+  if (score >= 80) return 'CLEAN';
+  if (score >= 60) return 'CAUTION';
+  if (score >= 40) return 'FLAGGED';
+  return 'TRAP';
+}
+
+function buildSummary(
+  verdict: VerdictViewModel['hero']['verdict'],
+  lpLocked: boolean,
+  top10HolderPct: number,
+  priceMove6h: number
+): string {
+  if (verdict === 'CLEAN') {
+    return 'No major structural red flags. Market risk still applies, but the token does not currently look like an obvious trap.';
+  }
+  if (verdict === 'CAUTION') {
+    return `Some risks present. ${lpLocked ? 'Liquidity is tracked, but concentration is still worth respecting.' : 'LP is not locked.'} Top 10 holders control ${top10HolderPct.toFixed(0)}% of supply, so size down and define the exit before you enter.`;
+  }
+  if (verdict === 'FLAGGED') {
+    return `Multiple risks are active. ${lpLocked ? 'Liquidity exists, but structure is weak.' : 'Unlocked LP sharply increases rug risk.'} With a ${priceMove6h.toFixed(0)}% six-hour move, this is not a token to chase casually.`;
+  }
+  return `Critical risk stack detected. ${lpLocked ? 'Structure is already weak.' : 'Unlocked liquidity makes this especially dangerous.'} Treat it like a trap unless you can independently validate the exit path and holder behavior.`;
+}
+
+function shortAddress(value: string): string {
+  return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }

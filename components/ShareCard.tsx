@@ -54,10 +54,11 @@ export default function ShareCard({ trade, wallet, onClose }: ShareCardProps) {
 
   const handleShareX = useCallback(() => {
     const pnlDisplay = pnlStr(trade);
+    const appUrl = window.location.origin;
     const text = encodeURIComponent(
-      `Just ran my wallet through TradePostmortem 💀\n\n` +
+      `Just ran my wallet through SLIP\n\n` +
       `$${trade.tokenSymbol}: ${diagnosisLabel(trade.diagnosis).toUpperCase()} — ${pnlDisplay}\n\n` +
-      `Find your worst trades: tradepostmortem.xyz`
+      `See the full onchain breakdown: ${appUrl}`
     );
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   }, [trade]);
@@ -74,7 +75,7 @@ export default function ShareCard({ trade, wallet, onClose }: ShareCardProps) {
           className="share-card-preview"
           style={{ borderColor: color }}
         >
-          <div className="sc-eyebrow">TRADE AUTOPSY · TRADEPOSTMORTEM.XYZ</div>
+          <div className="sc-eyebrow">TRADE AUTOPSY · SLIP</div>
           <div className="sc-diagnosis" style={{ color }}>
             {diagnosisLabel(trade.diagnosis).toUpperCase()}
           </div>
@@ -89,7 +90,7 @@ export default function ShareCard({ trade, wallet, onClose }: ShareCardProps) {
           </div>
 
           <div className="sc-footer">
-            <div className="sc-brand">TradePostmortem</div>
+            <div className="sc-brand">SLIP</div>
             <div>
               {shortWallet(wallet)} · {monthYear(trade.entryTimestamp)}
             </div>

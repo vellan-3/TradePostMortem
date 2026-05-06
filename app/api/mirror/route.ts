@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMirrorData } from '@/lib/mirror-engine';
+import { getWinnerDataWithFallback } from '@/lib/mirror-engine';
 import { PublicKey } from '@solana/web3.js';
 
 export async function GET(req: NextRequest) {
@@ -20,13 +20,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await getMirrorData(
+    const result = await getWinnerDataWithFallback(
       mint,
       entryTs ? Number(entryTs) : undefined,
       sol ? Number(sol) : undefined,
       wallet ?? undefined
     );
-    return NextResponse.json(result);
+    return NextResponse.json(result.mirrorData);
   } catch (err) {
     console.error('[mirror]', err);
     return NextResponse.json(
