@@ -1,40 +1,31 @@
-# TradePostmortem
+# SLIP — Onchain Trade Intelligence
+> *"Don't get in wrong. Know who's winning while you're in. Know what it cost you after."*
 
-> *"You lost the trade. We show you exactly why, when, and how much it cost you."*
+SLIP is a Solana trade intelligence suite. Paste any wallet to get a full autopsy of your trading history, see who won on every token you traded, and scan any token before you enter.
 
-**TradePostmortem** is a Solana wallet trade analyzer
+## Features
 
-Paste any Solana wallet — we pull swap history via Helius, price each entry/exit with Birdeye, and output a ranked breakdown of your worst trades with specific, actionable diagnoses.
+### VERDICT — Before the trade
+Full token safety and market structure scan. Mint authority, LP lock, transfer hooks, deployer history, holder concentration, timing position. One score. One verdict.
 
----
+### MIRROR — During the trade
+Every wallet winning on your token right now, ranked by SOL gained. Entry timing gap, size gap, DEX used. The exact pattern winners share.
 
-## Problem
+### PAYSLIP — After the trade
+Full trade autopsy. Entry percentile, peak missed, SOL left on table. Who won the most on each token. Recurring mistake quantified. Trading grade, broken down.
 
-Every Solana trader has stared at a trade they blew. Dexscreener shows the chart. Solscan shows the tx. **Nothing shows you the full autopsy** — the entry percentile, the peak you missed, and exactly how much SOL you left on the table. TradePostmortem does that in 10 seconds, on any wallet, no connection required.
+## Birdeye API Integration
 
----
+| Endpoint | Used for |
+|---|---|
+| `/defi/historical_price_unix` | Entry and exit price for every trade |
+| `/defi/v3/ohlcv` | Peak price after entry — "left on table" calculation |
+| `/defi/v2/tokens/top_traders` | Winner leaderboard per token (MIRROR) |
+| `/defi/v3/token/market-data` | Liquidity and volume for VERDICT |
+| `/defi/txs/token` | Real buy/sell ratio for VERDICT |
+| `/defi/v3/token/meta-data/multiple` | Token symbol resolution |
 
-## Data Flow
-
-```
-User enters wallet
-      ↓
-GET /api/analyze?wallet=ADDRESS
-      ↓
-Helius: last 100 SWAP transactions (parsed)
-      ↓
-Group by token mint: buys vs sells
-      ↓
-For each buy: Birdeye historical_price_unix (entry & exit timestamps)
-      ↓  
-getOHLCV: find peak after entry
-      ↓
-Analyzer: damage score, diagnosis, left-on-table calculation
-      ↓
-Results: sorted by damage score, shareable as PNG cards
-```
-
----
+A single Payslip analysis makes ~12–15 Birdeye API calls.
 
 ## Tech Stack
 
@@ -42,47 +33,24 @@ Results: sorted by damage score, shareable as PNG cards
 |---|---|
 | Frontend | Next.js 14 (App Router) + Tailwind CSS |
 | Backend | Next.js API Routes (serverless) |
-| Swap History | Helius Parse Transaction History API |
-| Price Data | Birdeye Historical Price + OHLCV |
+| Swap History | Helius Enhanced Transaction API |
+| Price Data | Birdeye Historical Price + OHLCV + Top Traders |
+| Token Safety | RugCheck API |
 | Hosting | Vercel |
-| Share Cards | html-to-image (PNG export) |
 | Language | TypeScript |
-
----
 
 ## Running Locally
 
 ```bash
-git clone https://github.com/vellan-3/TradePostMortem.git
-cd TradePostMortem
+git clone https://github.com/vellan-3/slip.git
+cd slip
 npm install
-
-# Add your API keys
 cp .env.local.example .env.local
-# Edit .env.local with your HELIUS_API_KEY and BIRDEYE_API_KEY
-
+# Add HELIUS_API_KEY, BIRDEYE_API_KEY, ANTHROPIC_API_KEY
 npm run dev
-# Open http://localhost:3000
 ```
 
----
+Live Demo
+[your-vercel-url]
 
-## Diagnosis Types
-
-| Code | Meaning |
-|---|---|
-| `BOUGHT_THE_TOP` | Entered within 15% of the local peak |
-| `SOLD_THE_BOTTOM` | Sold near the local low; token recovered after |
-| `PAPER_HANDS` | Sold a profitable trade before the real move |
-| `DIAMOND_HANDS_REKT` | Held through peak, exited at a loss |
-| `GOOD_TRADE` | Captured most of the available move |
-
----
-
-## Live Demo
-
-[tradepostmortem.vercel.app](https://tradepostmortem.vercel.app)
-
----
-
-*Built for Colosseum Frontier Hackathon | Deadline May 11, 2026*
+Built for Colosseum Frontier Hackathon · Birdeye BIP Competition Sprint 2 · May 2026
