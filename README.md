@@ -51,6 +51,6 @@ npm run dev
 ```
 
 Live Demo
-https://project-ifcho.vercel.app
+https://slip-official-v2.vercel.app
 
 Built for Colosseum Frontier Hackathon · Birdeye BIP Competition Sprint 2 · May 2026
