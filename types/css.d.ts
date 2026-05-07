@@ -3,3 +3,5 @@ declare module '*.css' {
   export default content;
 }
 
+
+/* SLIP v2 Official Release */

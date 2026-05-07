@@ -104,3 +104,5 @@ function getScoreColor(score: number): string {
   return 'var(--red)';
 }
 
+
+/* SLIP v2 Official Release */

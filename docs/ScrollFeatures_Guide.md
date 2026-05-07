@@ -191,3 +191,5 @@ The math self-adjusts — `p` is always calculated from the actual scrollable di
 *ScrollFeatures.tsx — drop-in replacement for the three sl-feature-row blocks*
 *No external dependencies beyond React*
 
+
+# SLIP v2 Official Release

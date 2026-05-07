@@ -116,3 +116,5 @@ export default function ShareModal({ trade, onClose }: Props) {
   );
 }
 
+
+/* SLIP v2 Official Release */

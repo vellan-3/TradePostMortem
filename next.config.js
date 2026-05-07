@@ -8,3 +8,5 @@ const nextConfig = {
 
 module.exports = nextConfig;
 
+
+/* SLIP v2 Official Release */

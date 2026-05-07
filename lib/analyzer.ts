@@ -314,3 +314,5 @@ export function computeGrade(analyses: TradeAnalysis[]): TradingGrade {
   };
 }
 
+
+/* SLIP v2 Official Release */

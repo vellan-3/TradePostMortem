@@ -68,3 +68,5 @@ Key dirs:
 - `lib/` — data fetching, analysis logic
 - `types/` — TypeScript types
 
+
+# SLIP v2 Official Release

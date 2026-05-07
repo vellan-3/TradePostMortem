@@ -785,3 +785,5 @@ Test after Fix 1 and Fix 2 before proceeding. Those two are responsible for the 
 
 *SLIP Payslip Fix Guide — 9 bugs, complete implementation*
 
+
+# SLIP v2 Official Release

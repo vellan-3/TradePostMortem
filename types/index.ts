@@ -245,3 +245,5 @@ export interface TradingGrade {
   tokenSelection: number;
 }
 
+
+/* SLIP v2 Official Release */

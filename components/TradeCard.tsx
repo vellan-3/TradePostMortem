@@ -292,3 +292,5 @@ export default function TradeCard({ trade, rank, wallet }: TradeCardProps) {
   );
 }
 
+
+/* SLIP v2 Official Release */

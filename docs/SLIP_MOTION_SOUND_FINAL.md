@@ -395,3 +395,5 @@ If the panel isn't sliding, check whether `.side-panel` in your `global.css` alr
 
 *7 files. ~40 lines. Nothing more.*
 
+
+# SLIP v2 Official Release

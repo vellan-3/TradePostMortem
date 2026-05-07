@@ -226,3 +226,5 @@ function toneColor(tone?: LabeledValue['tone']) {
   if (tone === 'critical') return 'var(--slip-red)';
   return '#eeeef5';
 }
+
+/* SLIP v2 Official Release */

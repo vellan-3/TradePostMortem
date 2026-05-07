@@ -104,3 +104,5 @@ export default function LoadingScreen({ wallet }: Props) {
   );
 }
 
+
+/* SLIP v2 Official Release */

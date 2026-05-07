@@ -27,3 +27,5 @@ export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children })
   );
 };
 
+
+/* SLIP v2 Official Release */

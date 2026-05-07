@@ -155,3 +155,5 @@ export default function ResultsView({ wallet, analyses, summary }: ResultsViewPr
   );
 }
 
+
+/* SLIP v2 Official Release */

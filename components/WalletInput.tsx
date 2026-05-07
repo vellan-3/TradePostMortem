@@ -92,3 +92,5 @@ export default function WalletInput() {
   );
 }
 
+
+/* SLIP v2 Official Release */

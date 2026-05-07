@@ -264,3 +264,5 @@ function shortAddress(value: string): string {
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
 
+
+/* SLIP v2 Official Release */

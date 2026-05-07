@@ -5,3 +5,5 @@ export function buildSolscanTxLink(signature: string | null | undefined): string
   return `https://solscan.io/tx/${signature}`;
 }
 
+
+/* SLIP v2 Official Release */

@@ -66,3 +66,5 @@ export function diagnosisLabel(code: DiagnosisCode): string {
   return map[code] ?? 'Unknown';
 }
 
+
+/* SLIP v2 Official Release */

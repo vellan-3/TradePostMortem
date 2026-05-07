@@ -400,3 +400,5 @@ export default function LandingPage() {
   );
 }
 
+
+/* SLIP v2 Official Release */

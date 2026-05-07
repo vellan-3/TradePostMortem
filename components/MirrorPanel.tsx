@@ -152,3 +152,5 @@ export default function MirrorPanel({ mint, symbol, onClose }: Props) {
   );
 }
 
+
+/* SLIP v2 Official Release */

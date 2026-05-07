@@ -1179,3 +1179,5 @@ Test each section individually. Check it against the screenshot. Then move to th
 *Fonts: Syne · Instrument Sans · Space Mono*
 *Design source: Figma export + screenshot*
 
+
+# SLIP v2 Official Release

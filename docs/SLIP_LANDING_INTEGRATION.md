@@ -383,3 +383,5 @@ If you want them unified, update the font imports in the app's global.css to mat
 
 *Landing page integrated. Navigation clear. Product separated from marketing.*
 
+
+# SLIP v2 Official Release

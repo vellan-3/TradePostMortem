@@ -32,3 +32,5 @@ export async function getPumpFunMeta(mint: string): Promise<PumpFunMeta | null> 
   }
 }
 
+
+/* SLIP v2 Official Release */

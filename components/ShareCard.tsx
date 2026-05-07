@@ -126,3 +126,5 @@ export default function ShareCard({ trade, wallet, onClose }: ShareCardProps) {
   );
 }
 
+
+/* SLIP v2 Official Release */
