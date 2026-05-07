@@ -416,3 +416,4 @@ interface HeliusParsedTx {
     swap?: HeliusSwapEvent;
   };
 }
+

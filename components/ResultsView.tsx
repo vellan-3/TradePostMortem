@@ -154,3 +154,4 @@ export default function ResultsView({ wallet, analyses, summary }: ResultsViewPr
     </>
   );
 }
+

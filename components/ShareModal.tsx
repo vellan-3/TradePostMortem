@@ -115,3 +115,4 @@ export default function ShareModal({ trade, onClose }: Props) {
     </div>
   );
 }
+

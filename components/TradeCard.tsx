@@ -291,3 +291,4 @@ export default function TradeCard({ trade, rank, wallet }: TradeCardProps) {
     </>
   );
 }
+

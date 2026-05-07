@@ -1178,3 +1178,4 @@ Test each section individually. Check it against the screenshot. Then move to th
 *SLIP Landing Page — Implementation Guide*
 *Fonts: Syne · Instrument Sans · Space Mono*
 *Design source: Figma export + screenshot*
+

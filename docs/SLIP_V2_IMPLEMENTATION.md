@@ -819,3 +819,4 @@ git push origin v2.0-slip-wallet-entry
 
 *SLIP v2 — Branch: `feat/slip-v2-wallet-entry`*
 *Merge target: `main` · Tag on merge: `v2.0-slip-wallet-entry`*
+

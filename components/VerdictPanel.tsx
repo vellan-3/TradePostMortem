@@ -103,3 +103,4 @@ function getScoreColor(score: number): string {
   if (score >= 40) return '#f97316';
   return 'var(--red)';
 }
+

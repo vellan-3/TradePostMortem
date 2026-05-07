@@ -125,3 +125,4 @@ export default function ShareCard({ trade, wallet, onClose }: ShareCardProps) {
     </div>
   );
 }
+

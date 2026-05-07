@@ -62,3 +62,4 @@ export function playLossTrade() {
     osc.stop(t + 0.32);
   } catch { /* AudioContext blocked */ }
 }
+

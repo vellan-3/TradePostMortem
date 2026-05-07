@@ -4,3 +4,4 @@ export function buildSolscanTxLink(signature: string | null | undefined): string
   if (!/^[1-9A-HJ-NP-Za-km-z]+$/.test(signature)) return null;
   return `https://solscan.io/tx/${signature}`;
 }
+

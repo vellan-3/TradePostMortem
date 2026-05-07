@@ -67,3 +67,4 @@ Key dirs:
 - `components/` — UI components (ResultsView, WalletInput, etc.)
 - `lib/` — data fetching, analysis logic
 - `types/` — TypeScript types
+

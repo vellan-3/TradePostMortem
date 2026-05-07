@@ -801,3 +801,4 @@ Next.js 14 · TypeScript · Helius SDK · Birdeye API · Rugcheck API · Vercel
 
 *SLIP — Built for Colosseum Frontier Hackathon · Deadline May 11, 2026*
 *Branch: feat/slip-rebrand · Archive: archive/tradepostmortem-v1*
+

@@ -587,3 +587,4 @@ At 1,000 analyses/month: ~$20-40 in AI costs. Helius and Birdeye are flat-fee at
 
 *Research complete — SLIP technical requirements v2*
 *APIs confirmed: Helius · Birdeye · RugCheck · Anthropic Claude*
+

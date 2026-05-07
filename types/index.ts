@@ -244,3 +244,4 @@ export interface TradingGrade {
   sizeManagement: number;
   tokenSelection: number;
 }
+

@@ -65,3 +65,4 @@ export function diagnosisLabel(code: DiagnosisCode): string {
   };
   return map[code] ?? 'Unknown';
 }
+

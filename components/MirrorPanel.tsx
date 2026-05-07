@@ -151,3 +151,4 @@ export default function MirrorPanel({ mint, symbol, onClose }: Props) {
     </div>
   );
 }
+
