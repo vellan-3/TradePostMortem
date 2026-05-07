@@ -25,8 +25,8 @@ export default function Nav() {
   }
 
   return (
-    <nav style={{ width: '100%', position: 'fixed', top: '10px', left: 0, right: 0, zIndex: 1000, display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: '1928px', padding: '6px 15px', background: 'linear-gradient(180deg, rgba(153, 153, 153, 0.13) 50%, rgba(255, 255, 255, 0.05) 100%)', overflow: 'visible', borderRadius: '10px', outline: '1.50px solid rgba(255, 255, 255, 0.10)', outlineOffset: '-1.50px', justifyContent: 'space-between', alignItems: 'center', display: 'flex', margin: '0 20px', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+    <nav className="slip-nav">
+      <div style={{ width: '100%', maxWidth: '1928px', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
         <Link href="/" style={{ textDecoration: 'none', textAlign: 'center' }}>
           <span style={{ color: 'white', fontSize: '32px', fontFamily: 'var(--font-display-primary), sans-serif', fontWeight: 800, letterSpacing: '-2px', wordWrap: 'break-word' }}>SLIP </span>

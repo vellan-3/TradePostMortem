@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { DM_Mono, Instrument_Sans, Space_Grotesk, Space_Mono, Syne } from 'next/font/google';
 import './globals.css';
+import Nav from '@/components/Nav';
 import { WalletContextProvider } from '@/components/WalletContextProvider';
 
 const syne = Syne({
@@ -68,6 +69,7 @@ export default function RootLayout({
       <body>
         <div className="grid-bg" />
         <WalletContextProvider>
+          <Nav />
           {children}
         </WalletContextProvider>
       </body>

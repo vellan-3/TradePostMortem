@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Nav from '@/components/Nav';
 import type { LabeledValue, VerdictCheckRow, VerdictViewModel } from '@/types';
 
 export default function VerdictPage() {
@@ -41,12 +40,11 @@ export default function VerdictPage() {
 
   return (
     <>
-      <Nav />
-      <section className="slip-screen">
-        <div className="slip-screen-header">
-          <div className="slip-screen-label lbl-verdict">01 · Verdict</div>
-          <h1 className="slip-screen-title">Token Safety Scanner</h1>
-          <p className="slip-screen-sub">Paste any Solana token contract. Get a full verdict before you enter.</p>
+      <section className="slip-screen slip-page-body slip-bg-verdict">
+        <div className="page-hero">
+          <span className="eyebrow accent-verdict">01 · VERDICT</span>
+          <h1 className="page-title">Token Safety Scanner</h1>
+          <p className="page-subtitle">Paste any Solana token contract. Get a full verdict before you enter.</p>
         </div>
 
         <div className="slip-input-row" style={{ marginBottom: 40 }}>

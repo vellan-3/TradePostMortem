@@ -4561,3 +4561,97 @@ body::before {
 
 
 /* SLIP v2 Official Release */
+
+/* ─── SHARED UI SYSTEM (SLIP V2) ─────────────────────────────────────────── */
+
+:root {
+  --slip-stroke-soft: rgba(255,255,255,0.10);
+  --slip-radius-xs: 8px;
+  --slip-space-2: 8px;
+  --slip-space-6: 24px;
+  --slip-space-8: 48px;
+}
+
+.slip-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  height: 98px; /* Match existing visual height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.90);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--slip-stroke-soft);
+}
+
+.slip-page-body {
+  padding-top: var(--slip-space-8);
+  min-height: 100vh;
+}
+
+.page-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 40px;
+}
+
+.eyebrow {
+  font-family: "Space Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.eyebrow.accent-verdict { color: var(--slip-red); }
+.eyebrow.accent-mirror  { color: var(--slip-blue); }
+.eyebrow.accent-payslip { color: var(--slip-purple); }
+
+.page-title {
+  font-family: "Syne", sans-serif;
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--slip-text);
+  margin: 0;
+}
+
+.page-subtitle {
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 15px;
+  color: var(--slip-muted);
+  margin: var(--slip-space-2) 0 0;
+  max-width: 480px;
+  line-height: 1.5;
+}
+
+/* Page Background Gradients */
+.slip-bg-verdict {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 50, 50, 0.08), transparent 40%), var(--bg);
+}
+.slip-bg-mirror {
+  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08), transparent 40%), var(--bg);
+}
+.slip-bg-payslip {
+  background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.08), transparent 40%), var(--bg);
+}
+
+/* Mirror 3-column input group wrapper */
+.m-input-group-wrapper {
+  display: flex;
+  border-radius: var(--slip-radius-xs);
+  border: 1px solid var(--slip-stroke-soft);
+  overflow: hidden;
+}
+.m-input-group-wrapper > .m-input-wrap {
+  border-right: 1px solid var(--slip-stroke-soft);
+  border-radius: 0; /* Remove inner radii */
+}
+.m-input-group-wrapper > .m-input-wrap:last-child {
+  border-right: none;
+}

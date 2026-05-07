@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import Nav from '@/components/Nav';
+
 import type { LabeledValue, PayslipTradeCard, PayslipViewModel } from '@/types';
 import { buildSolscanTxLink } from '@/lib/utils';
 import ShareModal from '@/components/ShareModal';
@@ -78,16 +78,15 @@ export default function PayslipPage({ params }: { params: { wallet?: string[] } 
 
   return (
     <>
-      <Nav />
-      <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '140px 40px 120px' }}>
-        <div style={{ marginBottom: '64px' }}>
-          <div style={{ fontFamily: '"Space Mono", monospace', fontSize: '12px', color: '#3B82F6', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>03 · Payslip</div>
-          <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '64px', fontWeight: 800, letterSpacing: '-2px', marginBottom: '16px' }}>Your Trade Autopsy</h1>
-          <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.6)', maxWidth: '600px', lineHeight: 1.5 }}>What it cost you, who won it, and the pattern that keeps repeating.</p>
+      <section className="slip-page-body slip-bg-payslip" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '120px', paddingLeft: '40px', paddingRight: '40px' }}>
+        <div className="page-hero">
+          <span className="eyebrow accent-payslip">03 · PAYSLIP</span>
+          <h1 className="page-title">Your Trade Autopsy</h1>
+          <p className="page-subtitle">What it cost you, who won it, and the pattern that keeps repeating.</p>
         </div>
 
         <div style={{ marginBottom: '64px' }}>
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '24px', padding: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--slip-radius-xs)', padding: '8px', border: '1px solid var(--slip-stroke-soft)' }}>
             <input
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'white', padding: '16px 24px', fontSize: '18px', fontFamily: '"Instrument Sans", sans-serif' }}
               placeholder="Analyze wallet address..."
@@ -101,7 +100,7 @@ export default function PayslipPage({ params }: { params: { wallet?: string[] } 
               }}
             />
             <button 
-              style={{ padding: '16px 32px', background: '#3B82F6', borderRadius: '16px', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', opacity: (loading || !wallet.trim()) ? 0.6 : 1 }}
+              style={{ padding: '16px 32px', background: 'var(--slip-purple)', borderRadius: 'var(--slip-radius-xs)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer', opacity: (loading || !wallet.trim()) ? 0.6 : 1 }}
               disabled={loading || !wallet.trim()} 
               onClick={() => void generate()}
             >
@@ -117,7 +116,7 @@ export default function PayslipPage({ params }: { params: { wallet?: string[] } 
                 <span style={{ color: 'rgba(59,130,246,0.4)', marginLeft: '4px' }}>→</span>
               </button>
             )}
-            <button onClick={connectWalletAdapter} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '10px 16px', color: 'white', fontFamily: '"Instrument Sans", sans-serif', fontSize: '14px', cursor: 'pointer', transition: 'background 0.2s' }}>
+            <button onClick={connectWalletAdapter} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: '1px solid var(--slip-stroke-soft)', borderRadius: 'var(--slip-radius-xs)', padding: '10px 16px', color: 'var(--slip-text-muted)', fontFamily: '"Instrument Sans", sans-serif', fontSize: '14px', cursor: 'pointer', transition: 'background 0.2s' }}>
               <span>🔌</span>
               <span>Connect Wallet Provider</span>
               <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: '4px' }}>→</span>

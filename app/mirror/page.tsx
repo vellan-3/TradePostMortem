@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Nav from '@/components/Nav';
+
 import type { MirrorLeaderboardRow, MirrorViewModel } from '@/types';
 
 export default function MirrorPage() {
@@ -54,26 +54,27 @@ export default function MirrorPage() {
 
   return (
     <>
-      <Nav />
-      <section className="slip-screen slip-screen-wide">
-        <div className="slip-screen-header">
-          <div className="slip-screen-label lbl-mirror">02 · Mirror</div>
-          <h1 className="slip-screen-title">Winner Leaderboard</h1>
-          <p className="slip-screen-sub">See who is winning your token right now — and exactly how they&apos;re doing it.</p>
+      <section className="slip-screen slip-screen-wide slip-page-body slip-bg-mirror">
+        <div className="page-hero">
+          <span className="eyebrow accent-mirror">02 · MIRROR</span>
+          <h1 className="page-title">Winner Leaderboard</h1>
+          <p className="page-subtitle">See who is winning your token right now — and exactly how they&apos;re doing it.</p>
         </div>
 
         <div className="m-inputs">
-          <div className="m-input-wrap m-input-wrap-first">
-            <label className="m-input-label">Token Contract</label>
-            <input className="m-input" placeholder="Token mint address..." value={mint} onChange={e => setMint(e.target.value)} disabled={loading} />
-          </div>
-          <div className="m-input-wrap">
-            <label className="m-input-label">Your Wallet</label>
-            <input className="m-input" placeholder="Optional wallet for YOU row..." value={wallet} onChange={e => setWallet(e.target.value)} disabled={loading} />
-          </div>
-          <div className="m-input-wrap">
-            <label className="m-input-label">Your Entry (SOL)</label>
-            <input className="m-input" placeholder="e.g. 5.0" value={sol} onChange={e => setSol(e.target.value)} disabled={loading} />
+          <div className="m-input-group-wrapper">
+            <div className="m-input-wrap m-input-wrap-first">
+              <label className="m-input-label">Token Contract</label>
+              <input className="m-input" placeholder="Token mint address..." value={mint} onChange={e => setMint(e.target.value)} disabled={loading} />
+            </div>
+            <div className="m-input-wrap">
+              <label className="m-input-label">Your Wallet</label>
+              <input className="m-input" placeholder="Optional wallet for YOU row..." value={wallet} onChange={e => setWallet(e.target.value)} disabled={loading} />
+            </div>
+            <div className="m-input-wrap">
+              <label className="m-input-label">Your Entry (SOL)</label>
+              <input className="m-input" placeholder="e.g. 5.0" value={sol} onChange={e => setSol(e.target.value)} disabled={loading} />
+            </div>
           </div>
           <button className="slip-btn slip-btn-mirror m-find-btn" disabled={loading || !mint.trim()} onClick={() => void fetchMirror()}>
             {loading ? 'Scanning...' : 'Find Winners →'}
