@@ -1,3 +1,5 @@
+import TradeCard from './TradeCard';
+
 export default function ResultsView({ data, openCard, setOpenCard, onVerdict, onMirror }: {
   data: any;
   openCard: string | null;

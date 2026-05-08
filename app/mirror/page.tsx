@@ -63,7 +63,7 @@ export default function MirrorPage() {
           <span className="ds-eyebrow-lbl-mirror">Mirror</span>
         </div>
         <h1 className="ds-page-title">Winner<br />Leaderboard</h1>
-        <p className="ds-page-sub">See who is winning your token right now — and exactly how they're doing it.</p>
+        <p className="ds-page-sub">See who is winning your token right now — and exactly how they&apos;re doing it.</p>
       </div>
 
       {/* Input grid */}
