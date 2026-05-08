@@ -114,7 +114,7 @@ export default function MirrorPage() {
           {/* Left: leaderboard */}
           <div>
             <div className="ds-section-lbl">
-              {result.symbol} · {result.totalTraders} traders · ranked by realized P&L
+              {result.symbol} · {result.leaderboard.length} traders · ranked by realized P&L
             </div>
             <div className="ds-lb-head">
               <div className="ds-lb-head-lbl">#</div>
