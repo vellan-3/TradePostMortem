@@ -1231,17 +1231,18 @@ body::before {
 
 /* ── SLIP NAV ── */
 .slip-nav {
-  position: fixed;
-  inset: 0 0 auto 0;
-  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  height: 98px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 28px;
-  background: rgba(7,7,10,0.92);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--slip-border);
-  z-index: 200;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.90);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--slip-stroke-soft);
 }
 
 .slip-nav-logo {
@@ -4603,10 +4604,12 @@ body::before {
 /* ── PAGE CANVAS ── */
 .page-canvas {
   min-height: 100vh;
-  padding: 64px 64px 80px;
+  padding: 120px 64px 100px;
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  align-items: center;
+  text-align: center;
+  gap: 48px;
 }
 
 .canvas-verdict {
@@ -4632,6 +4635,7 @@ body::before {
 .ds-eyebrow {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   font-family: "Space Mono", monospace;
   font-size: 11px;
@@ -4661,7 +4665,7 @@ body::before {
   line-height: 1.6;
   color: var(--slip-text-muted);
   max-width: 480px;
-  margin: 0;
+  margin: 0 auto;
 }
 
 /* ── CARD ── */
@@ -4839,6 +4843,9 @@ body::before {
   grid-template-columns: 1fr 320px;
   gap: 32px;
   align-items: start;
+  width: 100%;
+  max-width: 1200px;
+  text-align: left;
 }
 .ds-verdict-main { display: flex; flex-direction: column; gap: 0; }
 .ds-verdict-sidebar { display: flex; flex-direction: column; gap: 12px; }
@@ -4959,6 +4966,9 @@ body::before {
   grid-template-columns: 1fr 340px;
   gap: 32px;
   align-items: start;
+  width: 100%;
+  max-width: 1200px;
+  text-align: left;
 }
 .ds-mirror-side { display: flex; flex-direction: column; gap: 16px; }
 
@@ -5134,6 +5144,8 @@ body::before {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
+  width: 100%;
+  max-width: 1200px;
 }
 
 /* ── PATTERN BANNER ── */
