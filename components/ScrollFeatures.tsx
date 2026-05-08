@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 
 const FEATURES = [
   {
@@ -223,10 +224,12 @@ export default function ScrollFeatures() {
             {/* RIGHT */}
             <div className="sf-mockup-col">
               <div className="sl-mockup">
-                <img
+                <Image
                   key={f.img}
                   src={f.img}
                   alt={f.badge}
+                  width={600}
+                  height={800}
                   className={`sf-mockup-img ${f.imgClass} ${imgOut ? 'sf-img-out' : 'sf-img-in'}`}
                 />
                 <div className="sl-mockup-dots">
