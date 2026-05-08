@@ -1229,22 +1229,7 @@ body::before {
 @keyframes slip-fu { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
 @keyframes slip-blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.6)} }
 
-/* ── SLIP NAV ── */
-.slip-nav {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  width: 100%;
-  height: 98px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.90);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--slip-stroke-soft);
-}
-
+/* ── SLIP NAV (LEGACY - using inline styles in Nav.tsx now) ── */
 .slip-nav-logo {
   font-family: var(--font-display);
   font-weight: 800;

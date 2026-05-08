@@ -11,6 +11,16 @@ export default function Nav() {
   const { disconnect, connecting, publicKey } = useWallet();
   const { setVisible } = useWalletModal();
 
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Shorten for display: GMXj..yJsW
   const short = publicKey 
     ? publicKey.toBase58().slice(0, 4) + '..' + publicKey.toBase58().slice(-4) 
@@ -25,8 +35,35 @@ export default function Nav() {
   }
 
   return (
-    <nav className="slip-nav">
-      <div style={{ width: '100%', maxWidth: '1928px', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <nav style={{ 
+      width: '100%', 
+      position: 'fixed', 
+      top: scrolled ? '0' : '10px', 
+      left: 0, 
+      right: 0, 
+      zIndex: 1000, 
+      display: 'flex', 
+      justifyContent: 'center',
+      transition: 'top 0.3s ease'
+    }}>
+      <div style={{ 
+        width: '100%', 
+        maxWidth: scrolled ? '100%' : '1928px', 
+        padding: scrolled ? '12px 32px' : '6px 15px', 
+        background: scrolled ? 'rgba(0, 0, 0, 0.8)' : 'linear-gradient(180deg, rgba(153, 153, 153, 0.13) 50%, rgba(255, 255, 255, 0.05) 100%)', 
+        overflow: 'visible', 
+        borderRadius: scrolled ? '0' : '10px', 
+        outline: scrolled ? 'none' : '1.50px solid rgba(255, 255, 255, 0.10)', 
+        outlineOffset: '-1.50px', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        display: 'flex', 
+        margin: scrolled ? '0' : '0 20px', 
+        backdropFilter: 'blur(12px)', 
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.1)' : 'none',
+        transition: 'all 0.3s ease'
+      }}>
         
         <Link href="/" style={{ textDecoration: 'none', textAlign: 'center' }}>
           <span style={{ color: 'white', fontSize: '32px', fontFamily: 'var(--font-display-primary), sans-serif', fontWeight: 800, letterSpacing: '-2px', wordWrap: 'break-word' }}>SLIP </span>
@@ -103,6 +140,3 @@ export default function Nav() {
 
   );
 }
-
-
-/* SLIP v2 Official Release */
