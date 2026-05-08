@@ -39,190 +39,230 @@ export default function VerdictPage() {
   }, [runScan]);
 
   return (
-    <>
-      <section className="slip-screen slip-page-body slip-bg-verdict">
-        <div className="page-hero">
-          <span className="eyebrow accent-verdict">01 · VERDICT</span>
-          <h1 className="page-title">Token Safety Scanner</h1>
-          <p className="page-subtitle">Paste any Solana token contract. Get a full verdict before you enter.</p>
+    <div className="page-canvas canvas-verdict">
+      {/* ── Header ── */}
+      <div>
+        <div className="ds-eyebrow ds-eyebrow-verdict">
+          <span className="ds-eyebrow-num">01</span>
+          <span className="ds-eyebrow-sep" />
+          <span className="ds-eyebrow-lbl-verdict">Verdict</span>
         </div>
-
-        <div className="slip-input-row" style={{ marginBottom: 40 }}>
-          <input
-            className="slip-input"
-            placeholder="Token contract address..."
-            value={mint}
-            spellCheck={false}
-            autoComplete="off"
-            disabled={loading}
-            onChange={event => setMint(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === 'Enter') void runScan();
-            }}
-          />
-          <button className="slip-btn slip-btn-verdict" disabled={loading || !mint.trim()} onClick={() => void runScan()}>
-            {loading ? 'Scanning...' : 'Run Verdict →'}
-          </button>
-        </div>
-
-        {error && <div className="error-block" style={{ marginBottom: 24 }}>✕ {error}</div>}
-        {loading && (
-          <div className="v-loading">
-            <div className="v-loading-ring" />
-            <p className="v-loading-text">Scanning token safety, market structure and timing...</p>
-          </div>
-        )}
-        {result && <VerdictResults data={result} />}
-        {!result && !loading && !error && <VerdictEmptyState />}
-      </section>
-    </>
-  );
-}
-
-function VerdictEmptyState() {
-  const checks = ['Mint Authority', 'Freeze Authority', 'Liquidity Lock', 'Transfer Hook', 'Sell Route Simulation', 'Deployer History', 'Entry Timing'];
-  return (
-    <div className="v-empty">
-      <div className="v-empty-check-grid">
-        {checks.map(check => (
-          <div key={check} className="v-empty-check">
-            <div className="v-empty-dot v-empty-dot-pass" />
-            <span>{check}</span>
-          </div>
-        ))}
+        <h1 className="ds-page-title">Token Safety<br />Scanner</h1>
+        <p className="ds-page-sub">
+          Paste any Solana token contract. Get a full verdict before you enter.
+        </p>
       </div>
-      <p className="v-empty-label">Paste a token contract address above to run a full scan</p>
+
+      {/* ── Input ── */}
+      <div className="ds-input-row">
+        <input
+          value={mint}
+          onChange={e => setMint(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && void runScan()}
+          placeholder="Token contract address..."
+          spellCheck={false}
+          autoComplete="off"
+          disabled={loading}
+        />
+        <button className="ds-btn-run ds-btn-verdict" onClick={() => void runScan()} disabled={loading || !mint.trim()}>
+          {loading ? 'Scanning...' : 'Run Verdict →'}
+        </button>
+      </div>
+
+      {error && <div style={{ color: 'var(--slip-red)', fontSize: '14px', fontFamily: 'Space Mono, monospace' }}>✕ {error}</div>}
+
+      {/* ── Idle state ── */}
+      {!result && !loading && (
+        <div className="ds-idle">
+          <div className="ds-idle-checks">
+            {[
+              'Mint Authority', 'Freeze Authority', 'Liquidity Lock',
+              'Transfer Hook', 'Sell Route Simulation', 'Deployer History', 'Entry Timing'
+            ].map(label => (
+              <div className="ds-check-row" key={label}>
+                <span className="ds-dot ds-dot-idle" />
+                {label}
+                <span className="ds-check-badge ds-cb-idle">Pending</span>
+              </div>
+            ))}
+          </div>
+          <p className="ds-idle-hint">Paste a token contract address above to run a full scan</p>
+        </div>
+      )}
+
+      {/* ── Loading state ── */}
+      {loading && (
+        <div className="ds-idle">
+           <div className="ds-idle-checks">
+            {[
+              'Mint Authority', 'Freeze Authority', 'Liquidity Lock',
+              'Transfer Hook', 'Sell Route Simulation', 'Deployer History', 'Entry Timing'
+            ].map((label, i) => (
+              <div className="ds-check-row" key={label}>
+                <span className={`ds-dot ${i < 3 ? 'ds-dot-pass' : 'ds-dot-idle'}`} />
+                {label}
+                <span className={`ds-check-badge ${i < 3 ? 'ds-cb-pass' : 'ds-cb-idle'}`}>{i < 3 ? 'PASS' : 'Scanning...'}</span>
+              </div>
+            ))}
+          </div>
+          <p className="ds-idle-hint">Scanning token safety, market structure and timing...</p>
+        </div>
+      )}
+
+      {/* ── Result ── */}
+      {result && (
+        <div className="ds-fade-up">
+          <div className="ds-verdict-layout">
+
+            {/* Left: main card */}
+            <div>
+              <div className="ds-card">
+
+                {/* Score hero */}
+                <div className="ds-score-hero">
+                  <div className="ds-score-ring-wrap">
+                    <svg width="96" height="96" viewBox="0 0 96 96">
+                      <circle cx="48" cy="48" r="40" fill="none"
+                        stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
+                      <circle cx="48" cy="48" r="40" fill="none"
+                        stroke={getScoreColor(result.hero.score)} strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray="251.3"
+                        strokeDashoffset={251.3 * (1 - result.hero.score / 100)} />
+                    </svg>
+                    <div className="ds-score-ring-center">
+                      <span className="ds-score-number" style={{ color: getScoreColor(result.hero.score) }}>
+                        {result.hero.score}
+                      </span>
+                      <span className="ds-score-denom">/100</span>
+                    </div>
+                  </div>
+
+                  <div className="ds-score-meta">
+                    <span className={`ds-v-badge ds-vb-${badgeType(result.hero.verdict)}`}>
+                      {result.hero.verdict}
+                    </span>
+                    <div className="ds-verdict-badge-lg" style={{ color: getScoreColor(result.hero.score) }}>
+                      {result.hero.verdict.toUpperCase()}
+                    </div>
+                    <p className="ds-verdict-summary">{result.hero.summary}</p>
+                  </div>
+                </div>
+
+                {/* Safety Layer checks */}
+                <div className="ds-check-section">
+                  <div className="ds-check-section-title">
+                    <span>Safety Layer</span>
+                    <span style={{ color: 'var(--slip-text-soft)', fontSize: 10, fontWeight: 400 }}>Can you exit?</span>
+                  </div>
+                  {result.safetyLayer?.map((check) => (
+                    <div className="ds-check-row" key={check.name} style={{ marginBottom: 10 }}>
+                      <span className={`ds-dot ds-dot-${check.status === 'pass' ? 'pass' : check.status === 'critical' ? 'fail' : 'warn'}`} />
+                      {check.name}
+                      <span style={{ flex: 1, fontSize: 11, color: 'var(--slip-text-soft)', marginLeft: 8 }}>
+                        {check.detail}
+                      </span>
+                      <span className={`ds-check-badge ds-cb-${check.status === 'pass' ? 'pass' : check.status === 'critical' ? 'fail' : 'warn'}`}>
+                        {check.badge}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="ds-divider" />
+
+                {/* Market Structure checks */}
+                <div className="ds-check-section">
+                  <div className="ds-check-section-title">
+                    <span>Market Structure</span>
+                    <span style={{ color: 'var(--slip-text-soft)', fontSize: 10, fontWeight: 400 }}>Is the setup healthy?</span>
+                  </div>
+                  {result.marketStructure?.map((check) => (
+                    <div className="ds-check-row" key={check.name} style={{ marginBottom: 10 }}>
+                      <span className={`ds-dot ds-dot-${check.status === 'pass' ? 'pass' : check.status === 'critical' ? 'fail' : 'warn'}`} />
+                      {check.name}
+                      <span style={{ flex: 1, fontSize: 11, color: 'var(--slip-text-soft)', marginLeft: 8 }}>
+                        {check.detail}
+                      </span>
+                      <span className={`ds-check-badge ds-cb-${check.status === 'pass' ? 'pass' : check.status === 'critical' ? 'fail' : 'warn'}`}>
+                        {check.badge}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="ds-divider" />
+
+                {/* Timing Position checks */}
+                <div className="ds-check-section">
+                  <div className="ds-check-section-title">
+                    <span>Timing Position</span>
+                    <span style={{ color: 'var(--slip-text-soft)', fontSize: 10, fontWeight: 400 }}>Where are you in the curve?</span>
+                  </div>
+                  {result.timingPosition?.map((check) => (
+                    <div className="ds-check-row" key={check.name} style={{ marginBottom: 10 }}>
+                      <span className={`ds-dot ds-dot-${check.status === 'pass' ? 'pass' : check.status === 'critical' ? 'fail' : 'warn'}`} />
+                      {check.name}
+                      <span style={{ flex: 1, fontSize: 11, color: 'var(--slip-text-soft)', marginLeft: 8 }}>
+                        {check.detail}
+                      </span>
+                      <span className={`ds-check-badge ds-cb-${check.status === 'pass' ? 'pass' : check.status === 'critical' ? 'fail' : 'warn'}`}>
+                        {check.badge}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+
+            {/* Right: sidebar stats */}
+            <div className="ds-verdict-sidebar">
+              {result.marketMetrics.map(metric => (
+                <div className="ds-stat-pill" key={metric.label}>
+                  <span className="ds-stat-lbl">{metric.label}</span>
+                  <span className="ds-stat-val" style={{ color: toneColor(metric.tone) }}>{metric.value}</span>
+                  <span className="ds-stat-sub">{metric.sublabel ?? ''}</span>
+                </div>
+              ))}
+              <div className="ds-divider" />
+              <div className="ds-stat-pill" style={{ background: 'rgba(59,130,246,0.05)', borderColor: 'rgba(59,130,246,0.2)' }}>
+                <span className="ds-stat-lbl" style={{ color: 'var(--slip-blue)' }}>Next Step</span>
+                <span className="ds-stat-val" style={{ fontSize: 18 }}>Mirror Winners</span>
+                <a href={`/mirror?mint=${result.hero.mint}`} className="ds-btn-ghost" style={{ marginTop: 8, justifyContent: 'center' }}>
+                  See top wallets →
+                </a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
-function VerdictResults({ data }: { data: VerdictViewModel }) {
-  const circumference = 2 * Math.PI * 42;
-  const offset = circumference - (data.hero.score / 100) * circumference;
-  const verdictColor =
-    data.hero.verdict === 'CLEAN'
-      ? 'var(--slip-green)'
-      : data.hero.verdict === 'CAUTION'
-      ? 'var(--slip-yellow)'
-      : data.hero.verdict === 'FLAGGED'
-      ? 'var(--slip-orange)'
-      : 'var(--slip-red)';
-
-  return (
-    <>
-      <div className="v-hero">
-        <div className="v-score-ring-wrap">
-          <svg className="v-score-ring-svg" width="100" height="100" viewBox="0 0 100 100">
-            <circle className="v-ring-track" cx="50" cy="50" r="42" />
-            <circle className="v-ring-fill" cx="50" cy="50" r="42" stroke={verdictColor} strokeDasharray={circumference} strokeDashoffset={offset} />
-          </svg>
-          <div className="v-score-num">
-            <span style={{ color: verdictColor, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 28 }}>{data.hero.score}</span>
-            <span className="v-score-sub">/ 100</span>
-          </div>
-        </div>
-
-        <div className="v-hero-info">
-          <div className={`v-verdict-badge ${badgeClass(data.hero.verdict)}`}>{data.hero.verdict}</div>
-          <div className="v-symbol">
-            {data.hero.symbol !== 'UNKNOWN' ? `$${data.hero.symbol}` : data.hero.name} · {data.hero.mint.slice(0, 8)}...{data.hero.mint.slice(-5)}
-          </div>
-          <div className="v-summary">{data.hero.summary}</div>
-        </div>
-      </div>
-
-      <VerdictSection title="Safety Layer" subtitle="Can you exit?" rows={data.safetyLayer} />
-      <VerdictSection title="Market Structure" subtitle="Is the setup healthy?" rows={data.marketStructure} />
-
-      <div className="v-section">
-        <div className="v-section-head">Market Metrics <span>Volume, momentum, timing</span></div>
-        <div className="v-metrics-grid">
-          {data.marketMetrics.map(metric => (
-            <MetricCell key={metric.label} metric={metric} />
-          ))}
-        </div>
-      </div>
-
-      <VerdictSection title="Timing Position" subtitle="Where are you in the curve?" rows={data.timingPosition} />
-
-      <div className="v-cta">
-        <span>Already in this token?</span>
-        <a href={`/mirror?mint=${data.hero.mint}`} className="v-cta-btn">See who&apos;s winning → MIRROR</a>
-      </div>
-    </>
-  );
+function getScoreColor(score: number): string {
+  if (score >= 80) return 'var(--slip-success)';
+  if (score >= 60) return 'var(--slip-warning)';
+  if (score >= 40) return '#f97316';
+  return 'var(--slip-red)';
 }
 
-function VerdictSection({
-  title,
-  subtitle,
-  rows,
-}: {
-  title: string;
-  subtitle: string;
-  rows: VerdictCheckRow[];
-}) {
-  return (
-    <div className="v-section">
-      <div className="v-section-head">{title} <span>{subtitle}</span></div>
-      {rows.map(row => <CheckRow key={row.name} check={row} />)}
-    </div>
-  );
+function badgeType(verdict: string): string {
+  const v = verdict.toUpperCase();
+  if (v === 'CLEAN') return 'clean';
+  if (v === 'CAUTION') return 'caution';
+  if (v === 'FLAGGED' || v === 'RISKY') return 'risky';
+  return 'trap';
 }
 
-function CheckRow({ check }: { check: VerdictCheckRow }) {
-  const icon = check.status === 'pass' ? '✓' : check.status === 'warning' ? '!' : '✕';
-  const iconClass =
-    check.status === 'pass' ? 'v-check-icon v-check-pass' :
-    check.status === 'warning' ? 'v-check-icon v-check-warn' :
-    'v-check-icon v-check-fail';
-
-  return (
-    <div className="v-check-row">
-      <div className={iconClass}>{icon}</div>
-      <div className="v-check-body">
-        <div className="v-check-name">
-          {check.name}
-          {check.confidence !== 'live' && <span className="slip-note-chip">{check.confidence === 'simulated' ? 'Simulated' : check.confidence === 'estimated' ? 'Estimated' : 'Unavailable'}</span>}
-        </div>
-        <div className="v-check-detail">{check.detail}</div>
-      </div>
-      <span className={severityClass(check.badge)}>{check.badge}</span>
-    </div>
-  );
-}
-
-function MetricCell({ metric }: { metric: LabeledValue }) {
-  return (
-    <div className="v-metric-cell">
-      <div className="v-metric-label">
-        {metric.label}
-        {metric.confidence && metric.confidence !== 'live' && <span className="slip-note-chip">{metric.confidence === 'simulated' ? 'Simulated' : metric.confidence === 'estimated' ? 'Estimated' : 'Unavailable'}</span>}
-      </div>
-      <div className="v-metric-val" style={{ color: toneColor(metric.tone) }}>{metric.value}</div>
-      <div className="v-metric-sub">{metric.sublabel ?? ''}</div>
-    </div>
-  );
-}
-
-function badgeClass(verdict: VerdictViewModel['hero']['verdict']) {
-  if (verdict === 'CLEAN') return 'vbadge-clean';
-  if (verdict === 'CAUTION') return 'vbadge-caution';
-  if (verdict === 'FLAGGED') return 'vbadge-flagged';
-  return 'vbadge-trap';
-}
-
-function severityClass(badge: VerdictCheckRow['badge']) {
-  if (badge === 'CRITICAL') return 'v-sev v-sev-critical';
-  if (badge === 'WARNING') return 'v-sev v-sev-warning';
-  return 'v-sev v-sev-info';
-}
-
-function toneColor(tone?: LabeledValue['tone']) {
-  if (tone === 'pass') return 'var(--slip-green)';
-  if (tone === 'warning') return 'var(--slip-yellow)';
+function toneColor(tone?: string) {
+  if (tone === 'pass') return 'var(--slip-success)';
+  if (tone === 'warning') return 'var(--slip-warning)';
   if (tone === 'critical') return 'var(--slip-red)';
-  return '#eeeef5';
+  return 'var(--slip-text)';
 }
 
 /* SLIP v2 Official Release */

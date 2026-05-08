@@ -53,175 +53,166 @@ export default function MirrorPage() {
   }, [fetchMirror]);
 
   return (
-    <>
-      <section className="slip-screen slip-screen-wide slip-page-body slip-bg-mirror">
-        <div className="page-hero">
-          <span className="eyebrow accent-mirror">02 · MIRROR</span>
-          <h1 className="page-title">Winner Leaderboard</h1>
-          <p className="page-subtitle">See who is winning your token right now — and exactly how they&apos;re doing it.</p>
+    <div className="page-canvas canvas-mirror">
+
+      {/* Header */}
+      <div>
+        <div className="ds-eyebrow ds-eyebrow-mirror">
+          <span className="ds-eyebrow-num">02</span>
+          <span className="ds-eyebrow-sep" />
+          <span className="ds-eyebrow-lbl-mirror">Mirror</span>
         </div>
-
-        <div className="m-inputs">
-          <div className="m-input-group-wrapper">
-            <div className="m-input-wrap m-input-wrap-first">
-              <label className="m-input-label">Token Contract</label>
-              <input className="m-input" placeholder="Token mint address..." value={mint} onChange={e => setMint(e.target.value)} disabled={loading} />
-            </div>
-            <div className="m-input-wrap">
-              <label className="m-input-label">Your Wallet</label>
-              <input className="m-input" placeholder="Optional wallet for YOU row..." value={wallet} onChange={e => setWallet(e.target.value)} disabled={loading} />
-            </div>
-            <div className="m-input-wrap">
-              <label className="m-input-label">Your Entry (SOL)</label>
-              <input className="m-input" placeholder="e.g. 5.0" value={sol} onChange={e => setSol(e.target.value)} disabled={loading} />
-            </div>
-          </div>
-          <button className="slip-btn slip-btn-mirror m-find-btn" disabled={loading || !mint.trim()} onClick={() => void fetchMirror()}>
-            {loading ? 'Scanning...' : 'Find Winners →'}
-          </button>
-        </div>
-
-        {error && <div className="error-block" style={{ marginBottom: 24 }}>✕ {error}</div>}
-        {loading && (
-          <div className="v-loading">
-            <div className="v-loading-ring" style={{ borderTopColor: 'var(--slip-blue)' }} />
-            <p className="v-loading-text">Fetching winner leaderboard and gap analysis...</p>
-          </div>
-        )}
-        {result && <MirrorResults data={result} />}
-        {!result && !loading && !error && (
-          <div className="v-empty">
-            <div style={{ fontSize: 13, color: 'var(--slip-muted)', textAlign: 'center', lineHeight: 1.8, maxWidth: 420 }}>
-              Enter a token mint address to rank the current winners on that token, compare your position against the top wallet, and see the winner pattern panel.
-            </div>
-          </div>
-        )}
-      </section>
-    </>
-  );
-}
-
-function MirrorResults({ data }: { data: MirrorViewModel }) {
-  const rows = data.yourRow ? [...data.leaderboard.slice(0, 5), data.yourRow] : data.leaderboard.slice(0, 5);
-  const topWinner = data.leaderboard[0] ?? null;
-
-  return (
-    <div className="mirror-layout">
-      <div className="mirror-lb-col">
-        <div className="mirror-lb-wrap">
-          <div className="mirror-lb-top">
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: '#eeeef5' }}>
-              {data.symbol !== 'UNKNOWN' ? `$${data.symbol}` : 'Token'} · Winner board
-            </span>
-          </div>
-          <div className="lb-header">
-            <span>#</span>
-            <span>Wallet</span>
-            <span>Total P&amp;L</span>
-            <span>ROI</span>
-            <span>Hold Time</span>
-          </div>
-          {rows.map((row, index) => (
-            <LeaderboardRow
-              key={`${row.wallet}-${index}`}
-              row={row}
-              rank={row.tag === 'Your Wallet' ? 'YOU' : `${index + 1}`}
-              isYou={row.tag === 'Your Wallet'}
-            />
-          ))}
-        </div>
+        <h1 className="ds-page-title">Winner<br />Leaderboard</h1>
+        <p className="ds-page-sub">See who is winning your token right now — and exactly how they're doing it.</p>
       </div>
 
-      <div className="mirror-side">
-        {data.comparison && topWinner && (
-          <div className="gap-card">
-            <div className="gap-label">Your Position vs #1 Winner</div>
-            <div className="gap-vs">
-              <div className="gap-side">
-                <div className="gap-side-label" style={{ color: 'var(--slip-purple)' }}>YOU</div>
-                <div className="gap-side-val" style={{ color: data.comparison.yourPnlSol >= 0 ? 'var(--slip-green)' : 'var(--slip-red)' }}>
-                  {data.comparison.yourPnlSol >= 0 ? '+' : ''}{data.comparison.yourPnlSol.toFixed(1)} SOL
+      {/* Input grid */}
+      <div className="ds-mirror-input-grid">
+        <div className="ds-mirror-field">
+          <div className="ds-mirror-field-lbl">Token Contract</div>
+          <input value={mint} onChange={e => setMint(e.target.value)} placeholder="Token mint address..." spellCheck={false} disabled={loading} />
+        </div>
+        <div className="ds-mirror-field">
+          <div className="ds-mirror-field-lbl">Your Wallet (optional)</div>
+          <input value={wallet} onChange={e => setWallet(e.target.value)} placeholder="For your row..." disabled={loading} />
+        </div>
+        <div className="ds-mirror-field">
+          <div className="ds-mirror-field-lbl">Your Entry (SOL)</div>
+          <input value={sol} onChange={e => setSol(e.target.value)} placeholder="e.g. 3.0" disabled={loading} />
+        </div>
+        <button className="ds-mirror-submit" onClick={() => void fetchMirror()} disabled={loading || !mint.trim()}>
+          {loading ? 'Scanning...' : 'Find Winners →'}
+        </button>
+      </div>
+
+      {error && <div style={{ color: 'var(--slip-red)', fontSize: '14px', fontFamily: 'Space Mono, monospace' }}>✕ {error}</div>}
+
+      {/* Idle */}
+      {!result && !loading && (
+        <div className="ds-idle">
+          <p className="ds-idle-hint">
+            Enter a token mint address to rank all wallets that traded it,
+            compare your position against the top winner, and see the winner pattern panel.
+          </p>
+        </div>
+      )}
+
+       {/* Loading */}
+       {loading && (
+        <div className="ds-idle">
+           <div className="v-loading-ring" style={{ borderTopColor: 'var(--slip-blue)', width: 40, height: 40, borderWidth: 3 }} />
+          <p className="ds-idle-hint">
+            Fetching winner leaderboard and gap analysis...
+          </p>
+        </div>
+      )}
+
+      {/* Result */}
+      {result && (
+        <div className="ds-fade-up ds-mirror-layout">
+
+          {/* Left: leaderboard */}
+          <div>
+            <div className="ds-section-lbl">
+              {result.symbol} · {result.totalTraders} traders · ranked by realized P&L
+            </div>
+            <div className="ds-lb-head">
+              <div className="ds-lb-head-lbl">#</div>
+              <div className="ds-lb-head-lbl">Wallet</div>
+              <div className="ds-lb-head-lbl">P&L (SOL)</div>
+              <div className="ds-lb-head-lbl">Entry</div>
+              <div className="ds-lb-head-lbl">Hold</div>
+            </div>
+
+            {result.leaderboard?.map((winner, i) => (
+              <div
+                key={`${winner.wallet}-${i}`}
+                className={`ds-lb-row ${i === 0 ? 'ds-lb-row-top' : ''} ${winner.tag === 'Your Wallet' ? 'ds-lb-row-you' : ''}`}
+              >
+                <div className={`ds-lb-rank ${i === 0 ? 'ds-lb-rank-1' : i === 1 ? 'ds-lb-rank-2' : i === 2 ? 'ds-lb-rank-3' : ''} ${winner.tag === 'Your Wallet' ? 'ds-lb-rank-you' : ''}`}>
+                  {winner.tag === 'Your Wallet' ? 'YOU' : i + 1}
                 </div>
-                <div className="gap-side-sub">{data.comparison.yourEntryLine}</div>
+                <div>
+                  <div className="ds-lb-addr">
+                    {winner.walletLabel}
+                    {winner.tag && winner.tag !== 'Your Wallet' && <span className={`ds-wallet-tag ds-wt-${winner.tag.toLowerCase().replace(' ', '')}`}>{winner.tag}</span>}
+                    {winner.tag === 'Your Wallet' && <span className="ds-wallet-tag ds-wt-you">You</span>}
+                  </div>
+                  <div className="ds-lb-sub">{winner.entrySub ?? winner.entryLine}</div>
+                </div>
+                <div className={`ds-lb-pnl ${winner.totalPnlSol >= 0 ? 'ds-lb-pnl-pos' : 'ds-lb-pnl-neg'}`}>
+                  {winner.totalPnlSol >= 0 ? '+' : ''}{winner.totalPnlSol.toFixed(1)}
+                </div>
+                <div className="ds-lb-entry">{winner.entrySol ?? winner.entryLine.split('at')[0]} SOL</div>
+                <div className="ds-lb-hold">{winner.holdDisplay}</div>
               </div>
-              <div className="gap-divider">vs</div>
-              <div className="gap-side" style={{ textAlign: 'right' }}>
-                <div className="gap-side-label" style={{ color: 'var(--slip-green)' }}>WINNER</div>
-                <div className="gap-side-val" style={{ color: 'var(--slip-green)' }}>+{data.comparison.winnerPnlSol.toFixed(1)} SOL</div>
-                <div className="gap-side-sub">{data.comparison.winnerEntryLine}</div>
+            ))}
+          </div>
+
+          {/* Right: gap card + pattern insights */}
+          <div className="ds-mirror-side">
+            {result.comparison && (
+              <div className="ds-gap-card">
+                <div className="ds-gap-card-title">Your Position vs #1 Winner</div>
+                <div className="ds-gap-vs">
+                  <div className="ds-gap-side">
+                    <span className="ds-gap-side-lbl" style={{ color: 'var(--slip-purple)' }}>You</span>
+                    <span className="ds-gap-side-val" style={{ color: result.comparison.yourPnlSol < 0 ? 'var(--slip-red)' : 'var(--slip-success)' }}>
+                      {result.comparison.yourPnlSol >= 0 ? '+' : ''}{result.comparison.yourPnlSol.toFixed(1)} SOL
+                    </span>
+                    <span className="ds-gap-side-sub">{result.comparison.yourEntryLine}</span>
+                  </div>
+                  <div className="ds-gap-divider">vs</div>
+                  <div className="ds-gap-side" style={{ textAlign: 'right' }}>
+                    <span className="ds-gap-side-lbl" style={{ color: 'var(--slip-success)' }}>Winner</span>
+                    <span className="ds-gap-side-val" style={{ color: 'var(--slip-success)' }}>
+                      +{result.comparison.winnerPnlSol.toFixed(1)} SOL
+                    </span>
+                    <span className="ds-gap-side-sub">{result.comparison.winnerEntryLine}</span>
+                  </div>
+                </div>
+                
+                <div className="ds-gap-stat">
+                  <span className="ds-gap-key">Entry timing gap</span>
+                  <span className="ds-gap-val ds-gap-val-neg">{result.comparison.entryTimingGapLabel}</span>
+                </div>
+                <div className="ds-gap-stat">
+                  <span className="ds-gap-key">Entry mcap gap</span>
+                  <span className="ds-gap-val ds-gap-val-neg">{result.comparison.entryMarketCapGapLabel}</span>
+                </div>
+                <div className="ds-gap-stat">
+                  <span className="ds-gap-key">SOL gap</span>
+                  <span className="ds-gap-val ds-gap-val-neg">{result.comparison.solGapLabel}</span>
+                </div>
+                <div className="ds-gap-stat">
+                  <span className="ds-gap-key">Winner used</span>
+                  <span className="ds-gap-val">{result.comparison.winnerDex}</span>
+                </div>
               </div>
-            </div>
+            )}
 
-            <GapStat label="Entry timing gap" value={data.comparison.entryTimingGapLabel} negative />
-            <GapStat label="Entry mcap gap" value={data.comparison.entryMarketCapGapLabel} negative />
-            <GapStat label="SOL gap" value={data.comparison.solGapLabel} negative />
-            <GapStat label="Winner used" value={`${data.comparison.winnerDex ?? 'Unavailable'}${data.comparison.winnerDexConfidence !== 'live' ? ' (Estimated)' : ''}`} />
-            <GapStat label="You used" value={`${data.comparison.yourDex ?? 'Unavailable'}${data.comparison.yourDexConfidence !== 'live' ? ' (Estimated)' : ''}`} />
+            {result.patternInsights && (
+              <div className="ds-pattern-insights">
+                <div className="ds-pi-title">◈ What Top 10 Winners Had in Common</div>
+                {result.patternInsights.avgEntryMarketCap && (
+                  <div className="ds-pi-row"><span className="ds-pi-key">Avg entry market cap</span><span className="ds-pi-val">{result.patternInsights.avgEntryMarketCap}</span></div>
+                )}
+                {result.patternInsights.avgHoldBeforePartialExit && (
+                  <div className="ds-pi-row"><span className="ds-pi-key">Avg hold before exit</span><span className="ds-pi-val">{result.patternInsights.avgHoldBeforePartialExit}</span></div>
+                )}
+                {result.patternInsights.mostUsedDex && (
+                  <div className="ds-pi-row"><span className="ds-pi-key">Most used DEX</span><span className="ds-pi-val">{result.patternInsights.mostUsedDex}</span></div>
+                )}
+                {result.patternInsights.partialProfitFrequency && (
+                  <div className="ds-pi-row"><span className="ds-pi-key">Took partial profits</span><span className="ds-pi-val">{result.patternInsights.partialProfitFrequency}</span></div>
+                )}
+              </div>
+            )}
           </div>
-        )}
 
-        <div className="pattern-card">
-          <div className="pattern-title"><span style={{ color: 'var(--slip-blue)' }}>◈</span> What Top 10 Winners Had in Common</div>
-          <PatternStat label="Avg entry market cap" value={data.patternInsights.avgEntryMarketCap} />
-          <PatternStat label="Avg hold before partial exit" value={data.patternInsights.avgHoldBeforePartialExit} />
-          <PatternStat label="Most used DEX" value={data.patternInsights.mostUsedDex} />
-          <PatternStat label="Took partial profits" value={data.patternInsights.partialProfitFrequency} />
-          <PatternStat label="Avg entry before peak" value={data.patternInsights.avgEntryBeforePeak} />
-          <PatternStat label="Avg size deployed" value={data.patternInsights.avgSizeDeployed} />
         </div>
+      )}
 
-        {data.comparisonNote && (
-          <div className="mirror-cta-card">
-            <div className="mirror-cta-label">Comparison Status</div>
-            <p className="mirror-cta-text">{data.comparisonNote}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function LeaderboardRow({ row, rank, isYou }: { row: MirrorLeaderboardRow; rank: string; isYou: boolean }) {
-  const tagClass =
-    row.tag === 'Smart Money' ? 'lb-tag-smart' :
-    row.tag === 'KOL' ? 'lb-tag-kol' :
-    row.tag === 'Bot' ? 'lb-tag-bot' :
-    '';
-
-  return (
-    <div className={`lb-row ${rank === '1' ? 'lb-row-top' : ''} ${isYou ? 'lb-row-you' : ''}`}>
-      <div className="lb-rank">{rank}</div>
-      <div className="lb-wallet">
-        <div className="lb-addr">
-          {row.walletLabel}
-          {row.tag && <span className={`lb-tag ${tagClass}`}>{row.tag}</span>}
-        </div>
-        <div className="lb-entry-info">
-          {row.entryLine}
-          {(row.confidence.entryMarketCap || row.confidence.dex) && <span className="slip-note-chip">Estimated</span>}
-        </div>
-      </div>
-      <div className={`lb-pnl ${row.totalPnlSol < 0 ? 'lb-pnl-neg' : ''}`}>{row.totalPnlSol >= 0 ? '+' : ''}{row.totalPnlSol.toFixed(1)} SOL</div>
-      <div className="lb-roi" style={{ color: row.roi >= 0 ? 'var(--slip-green)' : 'var(--slip-red)' }}>{row.roi >= 0 ? '+' : ''}{row.roi.toFixed(0)}%</div>
-      <div className="lb-hold">{row.holdDisplay}</div>
-    </div>
-  );
-}
-
-function PatternStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="pattern-item">
-      <span className="pattern-key">{label}</span>
-      <span className="pattern-val">{value}</span>
-    </div>
-  );
-}
-
-function GapStat({ label, value, negative }: { label: string; value: string; negative?: boolean }) {
-  return (
-    <div className="gap-stat-row">
-      <span className="gap-stat-key">{label}</span>
-      <span className={`gap-stat-val ${negative ? 'gap-neg' : ''}`}>{value}</span>
     </div>
   );
 }

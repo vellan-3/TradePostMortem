@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SLIP — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════
+   DESIGN SYSTEM — exact from SLIP_Design_System.html
+════════════════════════════════════════ */
+:root {
+  --slip-bg:            #000000;
+  --slip-surface-1:     #111111;
+  --slip-surface-2:     #1a1a1a;
+  --slip-surface-3:     rgba(255,255,255,0.05);
+  --slip-stroke-soft:   rgba(255,255,255,0.10);
+  --slip-stroke-strong: rgba(255,255,255,0.25);
+  --slip-text:          #ffffff;
+  --slip-text-muted:    rgba(255,255,255,0.70);
+  --slip-text-soft:     rgba(255,255,255,0.46);
+  --slip-blue:          #3B82F6;
+  --slip-blue-dark:     #234C90;
+  --slip-red:           #FF3232;
+  --slip-purple:        #8B5CF6;
+  --slip-success:       #10b981;
+  --slip-warning:       #f59e0b;
+  --slip-verdict-bg:    rgba(255,50,50,0.20);
+  --slip-mirror-bg:     rgba(59,130,246,0.25);
+  --slip-payslip-bg:    rgba(139,92,246,0.25);
+  --slip-gradient-blue: linear-gradient(180deg, #3B82F6 20%, #234C90 80%);
+  --slip-shadow-blue:
+    0 8px 6px -4px rgba(0,0,0,0.75),
+    0 48px 48px -6px rgba(0,0,0,0.75),
+    0 20px 32px rgba(255,255,255,0.12) inset,
+    0 -5px 10px rgba(0,0,0,0.50) inset,
+    0 10px 12px rgba(255,255,255,0.08) inset;
+  --slip-shadow-card:   0 0 0 1px rgba(255,255,255,0.06) inset;
+  --slip-radius-xs:  8px;
+  --slip-radius-sm:  12px;
+  --slip-radius-md:  18px;
+  --slip-radius-lg:  24px;
+  --slip-radius-xl:  28px;
+  --slip-radius-pill:999px;
+  --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:24px;
+  --sp6:32px; --sp7:40px; --sp8:48px; --sp9:64px; --sp10:80px;
+  /* page top padding — matches wherever the nav ends in the real app */
+  --page-top: 80px;
+}
+
+/* ── RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--slip-bg);
+  color:var(--slip-text);
+  font-family:"Instrument Sans",sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button,input{font-family:inherit;border:0;outline:0;background:none;color:inherit}
+a{text-decoration:none;color:inherit}
+
+/* ── TAB SWITCHER (demo only — remove in real app) ── */
+.demo-tabs{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  height:52px;
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  background:rgba(0,0,0,0.92);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--slip-stroke-soft);
+}
+.demo-tab{
+  padding:8px 20px;
+  border-radius:var(--slip-radius-sm);
+  font-family:"Space Mono",monospace;
+  font-size:11px;font-weight:700;
+  letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--slip-text-soft);
+  cursor:pointer;
+  transition:color .15s,background .15s;
+  border:1px solid transparent;
+}
+.demo-tab:hover{color:var(--slip-text);background:var(--slip-surface-3)}
+.demo-tab.t-verdict.active{color:var(--slip-red);background:rgba(255,50,50,0.10);border-color:rgba(255,50,50,0.25)}
+.demo-tab.t-mirror.active {color:var(--slip-blue);background:rgba(59,130,246,0.10);border-color:rgba(59,130,246,0.25)}
+.demo-tab.t-payslip.active{color:var(--slip-purple);background:rgba(139,92,246,0.10);border-color:rgba(139,92,246,0.25)}
+
+/* ── PAGE SHELL ── */
+.page{
+  display:none;
+  padding-top:var(--page-top);
+  min-height:100vh;
+  animation:fadeUp .28s ease both;
+}
+.page.active{display:block}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(14px)}
+  to  {opacity:1;transform:translateY(0)}
+}
+
+/* ── CANVAS — coloured ambient per feature ── */
+.canvas{
+  min-height:100vh;
+  padding:var(--sp9) var(--sp9) var(--sp10);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:var(--sp7);
+}
+
+.canvas-verdict{
+  background:
+    radial-gradient(ellipse 70% 35% at 20% 0%,rgba(255,50,50,0.15) 0%,transparent 65%),
+    radial-gradient(ellipse 40% 20% at 85% 100%,rgba(255,50,50,0.07) 0%,transparent 60%),
+    #000;
+}
+.canvas-mirror{
+  background:
+    radial-gradient(ellipse 70% 35% at 80% 0%,rgba(59,130,246,0.14) 0%,transparent 65%),
+    radial-gradient(ellipse 40% 20% at 10% 100%,rgba(59,130,246,0.06) 0%,transparent 60%),
+    #000;
+}
+.canvas-payslip{
+  background:
+    radial-gradient(ellipse 70% 35% at 50% 0%,rgba(139,92,246,0.14) 0%,transparent 65%),
+    radial-gradient(ellipse 40% 20% at 90% 100%,rgba(139,92,246,0.06) 0%,transparent 60%),
+    #000;
+}
+
+/* ── EYEBROW ── */
+.eyebrow{
+  display:flex;align-items:center;gap:10px;
+  font-family:"Space Mono",monospace;
+  font-size:11px;font-weight:700;
+  letter-spacing:0.18em;text-transform:uppercase;
+  margin-bottom:var(--sp4);
+}
+.eyebrow-num{color:var(--slip-text-soft)}
+.eyebrow-sep{width:1px;height:12px;background:var(--slip-stroke-strong)}
+.eyebrow-verdict .eyebrow-lbl{color:var(--slip-red)}
+.eyebrow-mirror  .eyebrow-lbl{color:var(--slip-blue)}
+.eyebrow-payslip .eyebrow-lbl{color:var(--slip-purple)}
+
+/* ── PAGE TITLE ── */
+.page-title{
+  font-family:"Syne",sans-serif;
+  font-size:clamp(36px,5vw,64px);
+  font-weight:800;
+  line-height:0.92;
+  letter-spacing:-0.05em;
+  margin-bottom:var(--sp4);
+}
+.page-sub{
+  font-size:16px;line-height:1.6;
+  color:var(--slip-text-muted);
+  max-width:480px;
+}
+
+/* ── CARD ── */
+.card{
+  border-radius:var(--slip-radius-lg);
+  border:1px solid var(--slip-stroke-soft);
+  background:linear-gradient(160deg,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.02) 100%);
+  box-shadow:var(--slip-shadow-card);
+  padding:28px;
+}
+
+/* ── INPUT ROW ── */
+.input-row{
+  display:flex;align-items:stretch;
+  border-radius:var(--slip-radius-sm);
+  border:1px solid var(--slip-stroke-strong);
+  background:rgba(255,255,255,0.04);
+  overflow:hidden;
+  transition:border-color .2s;
+  max-width:720px;
+}
+.input-row:focus-within{border-color:rgba(255,255,255,0.38)}
+
+.input-row input{
+  flex:1;height:56px;padding:0 20px;
+  font-size:14px;color:var(--slip-text);
+  background:transparent;
+}
+.input-row input::placeholder{
+  color:var(--slip-text-soft);
+  font-family:"Space Mono",monospace;font-size:13px;
+}
+
+/* ── BUTTONS ── */
+.btn-run{
+  height:56px;padding:0 28px;
+  font-size:14px;font-weight:700;letter-spacing:0.02em;
+  color:#fff;cursor:pointer;
+  white-space:nowrap;transition:opacity .15s;
+  border-radius:0;
+}
+.btn-run:hover{opacity:.88}
+.btn-run-verdict{background:var(--slip-red)}
+.btn-run-mirror {background:var(--slip-blue)}
+.btn-run-payslip{background:var(--slip-purple)}
+
+.btn-ghost{
+  height:44px;padding:0 18px;
+  border-radius:var(--slip-radius-sm);
+  border:1px solid var(--slip-stroke-strong);
+  color:var(--slip-text-muted);
+  font-size:13px;font-weight:600;
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;
+  transition:border-color .15s,color .15s;
+}
+.btn-ghost:hover{border-color:rgba(255,255,255,.4);color:var(--slip-text)}
+
+/* ── SECTION LABEL ── */
+.section-lbl{
+  font-family:"Space Mono",monospace;
+  font-size:10px;font-weight:700;
+  letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--slip-text-soft);
+  margin-bottom:var(--sp3);
+}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--slip-stroke-soft);margin:var(--sp4) 0}
+
+/* ── IDLE STATE ── */
+.idle{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;flex:1;gap:var(--sp5);
+  padding:var(--sp10) 0;text-align:center;
+}
+
+.idle-checks{
+  display:flex;flex-direction:column;gap:var(--sp3);
+  text-align:left;min-width:280px;
+}
+
+.check-row{
+  display:flex;align-items:center;gap:12px;
+  font-size:14px;color:var(--slip-text-muted);font-weight:500;
+}
+
+.dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.dot-idle  {background:rgba(255,255,255,0.2)}
+.dot-pass  {background:var(--slip-success); box-shadow:0 0 6px rgba(16,185,129,.6)}
+.dot-fail  {background:var(--slip-red);     box-shadow:0 0 6px rgba(255,50,50,.6)}
+.dot-warn  {background:var(--slip-warning); box-shadow:0 0 6px rgba(245,158,11,.6)}
+
+.check-badge{
+  margin-left:auto;
+  font-family:"Space Mono",monospace;
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 10px;border-radius:var(--slip-radius-pill);
+}
+.cb-idle  {color:var(--slip-text-soft);background:rgba(255,255,255,.05)}
+.cb-pass  {color:var(--slip-success);background:rgba(16,185,129,.1)}
+.cb-fail  {color:var(--slip-red);    background:rgba(255,50,50,.1)}
+.cb-warn  {color:var(--slip-warning);background:rgba(245,158,11,.1)}
+
+.idle-hint{
+  font-family:"Space Mono",monospace;
+  font-size:11px;letter-spacing:.08em;
+  color:var(--slip-text-soft);
+  max-width:400px;
+}
+
+/* ── STAT PILL ── */
+.stat-pill{
+  padding:20px 24px;
+  border-radius:var(--slip-radius-md);
+  border:1px solid var(--slip-stroke-soft);
+  background:rgba(255,255,255,0.03);
+  display:flex;flex-direction:column;gap:6px;
+}
+.stat-pill-lbl{
+  font-family:"Space Mono",monospace;
+  font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--slip-text-soft);
+}
+.stat-pill-val{
+  font-family:"Syne",sans-serif;
+  font-size:26px;font-weight:800;letter-spacing:-.04em;
+}
+.stat-pill-sub{font-size:12px;color:var(--slip-text-soft);margin-top:2px}
+
+/* ════════════════════════════════════════
+   VERDICT PAGE
+════════════════════════════════════════ */
+
+.verdict-layout{
+  display:grid;
+  grid-template-columns:1fr 320px;
+  gap:var(--sp6);
+  align-items:start;
+}
+
+/* Score hero */
+.score-hero{
+  display:flex;align-items:center;gap:var(--sp6);
+  padding-bottom:var(--sp5);
+  border-bottom:1px solid var(--slip-stroke-soft);
+  margin-bottom:var(--sp5);
+}
+
+.score-ring-wrap{position:relative;width:96px;height:96px;flex-shrink:0}
+.score-ring-wrap svg{transform:rotate(-90deg)}
+.score-ring-center{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.score-number{
+  font-family:"Syne",sans-serif;font-size:30px;font-weight:800;letter-spacing:-.04em;
+}
+.score-denom{font-size:11px;color:var(--slip-text-soft);margin-top:-2px}
+
+.score-meta{display:flex;flex-direction:column;gap:var(--sp3)}
+.verdict-badge-lrg{
+  font-family:"Syne",sans-serif;font-size:26px;font-weight:800;letter-spacing:-.03em;
+}
+.verdict-summary{font-size:13px;color:var(--slip-text-muted);line-height:1.6;max-width:420px}
+
+/* Verdict badge pill */
+.v-badge{
+  display:inline-flex;align-items:center;
+  font-family:"Space Mono",monospace;
+  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  padding:5px 14px;border-radius:var(--slip-radius-pill);
+  width:fit-content;
+}
+.v-badge-clean  {color:var(--slip-success);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25)}
+.v-badge-caution{color:var(--slip-warning);background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25)}
+.v-badge-risky  {color:var(--slip-red);    background:rgba(255,50,50,.12); border:1px solid rgba(255,50,50,.25)}
+.v-badge-trap   {color:#ff6b6b;background:rgba(255,50,50,.20);border:1px solid rgba(255,50,50,.4)}
+
+/* Check sections */
+.check-section{margin-bottom:var(--sp5)}
+.check-section-title{
+  font-family:"Space Mono",monospace;
+  font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--slip-text-soft);
+  margin-bottom:var(--sp3);
+  display:flex;align-items:center;justify-content:space-between;
+}
+
+/* Verdict sidebar */
+.verdict-sidebar{display:flex;flex-direction:column;gap:var(--sp3)}
+
+/* Market metrics 2x2 */
+.metrics-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:var(--sp3);
+}
+
+/* ════════════════════════════════════════
+   MIRROR PAGE
+════════════════════════════════════════ */
+
+.mirror-input-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 180px auto;
+  border-radius:var(--slip-radius-sm);
+  border:1px solid var(--slip-stroke-strong);
+  background:rgba(255,255,255,0.04);
+  overflow:hidden;
+  max-width:900px;
+}
+
+.mirror-field{
+  display:flex;flex-direction:column;
+  padding:14px 20px;
+  border-right:1px solid var(--slip-stroke-soft);
+}
+.mirror-field:last-child{border-right:0}
+
+.mirror-field-lbl{
+  font-family:"Space Mono",monospace;
+  font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--slip-text-soft);margin-bottom:6px;
+}
+.mirror-field input{
+  font-size:13px;color:var(--slip-text);
+  background:transparent;height:24px;
+}
+.mirror-field input::placeholder{
+  color:rgba(255,255,255,0.28);
+  font-family:"Space Mono",monospace;font-size:12px;
+}
+
+.mirror-submit{
+  padding:0 28px;
+  background:var(--slip-blue);color:#fff;
+  font-size:14px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;
+  gap:6px;transition:opacity .15s;white-space:nowrap;
+}
+.mirror-submit:hover{opacity:.88}
+
+.mirror-layout{
+  display:grid;
+  grid-template-columns:1fr 340px;
+  gap:var(--sp6);
+  align-items:start;
+}
+
+/* Leaderboard */
+.lb-table{width:100%}
+
+.lb-head{
+  display:grid;
+  grid-template-columns:48px 1fr 110px 110px 100px;
+  padding:10px 16px;gap:var(--sp4);
+}
+.lb-head-lbl{
+  font-family:"Space Mono",monospace;
+  font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--slip-text-soft);
+}
+
+.lb-row{
+  display:grid;
+  grid-template-columns:48px 1fr 110px 110px 100px;
+  padding:14px 16px;gap:var(--sp4);
+  border-radius:var(--slip-radius-sm);
+  align-items:center;
+  cursor:pointer;
+  transition:background .15s;
+  margin-bottom:2px;
+}
+.lb-row:hover{background:rgba(255,255,255,0.04)}
+.lb-row.lb-you{
+  background:rgba(59,130,246,0.07);
+  border:1px solid rgba(59,130,246,0.2);
+}
+.lb-row.lb-top{
+  background:rgba(16,185,129,0.04);
+}
+
+.lb-rank-n{
+  font-family:"Space Mono",monospace;font-size:13px;font-weight:700;
+  color:var(--slip-text-soft);text-align:center;
+}
+.lb-rank-n.rk1{color:#fbbf24}
+.lb-rank-n.rk2{color:#94a3b8}
+.lb-rank-n.rk3{color:#b45309}
+.lb-rank-n.rk-you{color:var(--slip-blue);font-size:10px;letter-spacing:.1em}
+
+.lb-wallet-col{}
+.lb-addr{
+  font-family:"Space Mono",monospace;font-size:12px;
+  color:var(--slip-text-muted);
+  display:flex;align-items:center;gap:8px;margin-bottom:3px;
+}
+.lb-wallet-tag{
+  font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 7px;border-radius:var(--slip-radius-pill);
+}
+.wt-smart{color:var(--slip-success);background:rgba(16,185,129,.12)}
+.wt-kol  {color:var(--slip-warning);background:rgba(245,158,11,.12)}
+.wt-bot  {color:var(--slip-blue);   background:rgba(59,130,246,.12)}
+.wt-you  {color:var(--slip-blue);   background:rgba(59,130,246,.15)}
+
+.lb-sub{font-size:10px;color:var(--slip-text-soft)}
+
+.lb-pnl{
+  font-family:"Syne",sans-serif;font-size:15px;font-weight:700;letter-spacing:-.02em;
+}
+.lb-pnl.pos{color:var(--slip-success)}
+.lb-pnl.neg{color:var(--slip-red)}
+
+.lb-entry{font-size:12px;color:var(--slip-text-muted);font-family:"Space Mono",monospace}
+.lb-hold {font-size:12px;color:var(--slip-text-soft)}
+
+/* Mirror side panel */
+.mirror-side{display:flex;flex-direction:column;gap:var(--sp4)}
+
+.gap-card{padding:22px;border-radius:var(--slip-radius-md);border:1px solid var(--slip-stroke-soft);background:rgba(255,255,255,0.03)}
+.gap-card-title{font-family:"Space Mono",monospace;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--slip-text-soft);margin-bottom:var(--sp4)}
+
+.gap-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:var(--sp3);align-items:center;margin-bottom:var(--sp4)}
+.gap-side{display:flex;flex-direction:column;gap:3px}
+.gap-side-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--slip-text-soft)}
+.gap-side-val{font-family:"Syne",sans-serif;font-size:22px;font-weight:800;letter-spacing:-.04em}
+.gap-side-sub{font-size:10px;color:var(--slip-text-soft)}
+.gap-divider{text-align:center;color:var(--slip-text-soft);font-size:14px}
+
+.gap-stat{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--slip-stroke-soft);font-size:11px}
+.gap-stat-key{color:var(--slip-text-soft)}
+.gap-stat-val{font-family:"Syne",sans-serif;font-weight:700;font-size:12px}
+.gap-stat-val.neg{color:var(--slip-red)}
+.gap-stat-val.pos{color:var(--slip-success)}
+
+.pattern-insights{padding:20px;border-radius:var(--slip-radius-md);border:1px solid rgba(59,130,246,0.25);background:rgba(59,130,246,0.05)}
+.pi-title{font-family:"Syne",sans-serif;font-size:14px;font-weight:800;color:var(--slip-blue);margin-bottom:var(--sp3);display:flex;align-items:center;gap:8px}
+.pi-row{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--slip-stroke-soft);font-size:11px}
+.pi-key{color:var(--slip-text-soft)}
+.pi-val{font-family:"Syne",sans-serif;font-weight:700;font-size:12px}
+
+/* ════════════════════════════════════════
+   PAYSLIP PAGE
+════════════════════════════════════════ */
+
+/* Grade row */
+.grade-row{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:4px;
+}
+.grade-main{
+  padding:28px 36px;
+  background:linear-gradient(160deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
+  border:1px solid var(--slip-stroke-soft);
+  border-radius:var(--slip-radius-lg) 0 0 var(--slip-radius-lg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-width:140px;
+}
+.grade-letter{
+  font-family:"Syne",sans-serif;font-size:64px;font-weight:800;letter-spacing:-.04em;line-height:1;
+}
+.grade-score{font-size:11px;color:var(--slip-text-soft);margin-top:4px}
+.grade-lbl  {font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--slip-text-soft);margin-top:6px}
+
+.grade-breakdown{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+}
+.grade-cell{
+  background:linear-gradient(160deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
+  border:1px solid var(--slip-stroke-soft);
+  padding:18px 20px;
+  display:flex;flex-direction:column;gap:4px;
+}
+.grade-cell:last-child{border-radius:0 var(--slip-radius-lg) var(--slip-radius-lg) 0}
+.grade-cell-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--slip-text-soft)}
+.grade-cell-letter{font-family:"Syne",sans-serif;font-size:30px;font-weight:800;letter-spacing:-.04em;line-height:1;margin-top:6px}
+.grade-cell-score{font-size:10px;color:var(--slip-text-soft);margin-top:2px}
+
+.grade-a{color:var(--slip-success)}
+.grade-b{color:#60a5fa}
+.grade-c{color:var(--slip-warning)}
+.grade-d{color:#f97316}
+.grade-f{color:var(--slip-red)}
+
+/* Stats strip */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+
+/* Pattern tax banner */
+.pattern-banner{
+  border-radius:var(--slip-radius-md);
+  border:1px solid rgba(255,50,50,0.22);
+  background:rgba(255,50,50,0.06);
+  padding:20px 24px;
+  display:flex;align-items:flex-start;gap:18px;
+}
+.pb-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.pb-title{font-family:"Syne",sans-serif;font-size:16px;font-weight:800;color:var(--slip-red);margin-bottom:4px;letter-spacing:-.02em}
+.pb-text{font-size:13px;color:var(--slip-text-muted);line-height:1.6}
+.pb-text b{color:rgba(255,120,120,.9)}
+
+/* Sort row */
+.sort-row{display:flex;gap:2px}
+.sort-btn{
+  padding:8px 18px;
+  border-radius:var(--slip-radius-xs);
+  font-family:"Space Mono",monospace;
+  font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--slip-text-soft);cursor:pointer;
+  border:1px solid transparent;transition:all .15s;
+  background:rgba(255,255,255,0.03);
+}
+.sort-btn:hover{color:var(--slip-text);border-color:var(--slip-stroke-soft)}
+.sort-btn.active{
+  color:var(--slip-text);
+  background:rgba(255,255,255,0.06);
+  border-color:var(--slip-stroke-soft);
+}
+
+/* Trade card */
+.trade-card{
+  border-radius:var(--slip-radius-md);
+  border:1px solid var(--slip-stroke-soft);
+  background:linear-gradient(160deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));
+  overflow:hidden;
+  margin-bottom:4px;
+  cursor:pointer;
+  transition:border-color .15s;
+}
+.trade-card:hover{border-color:rgba(255,255,255,0.2)}
+.trade-card.open{border-color:rgba(255,255,255,0.18)}
+
+/* Left accent by diagnosis */
+.tc-bought  {border-left:3px solid var(--slip-red)}
+.tc-sold    {border-left:3px solid var(--slip-warning)}
+.tc-paper   {border-left:3px solid var(--slip-warning)}
+.tc-diamond {border-left:3px solid var(--slip-red)}
+.tc-good    {border-left:3px solid var(--slip-success)}
+
+.tc-top{
+  display:grid;
+  grid-template-columns:40px 1fr 200px 160px;
+  align-items:center;
+  gap:0;
+  padding:16px 20px 16px 14px;
+}
+
+.tc-rank{
+  font-family:"Syne",sans-serif;font-size:18px;font-weight:800;
+  color:var(--slip-text-soft);text-align:center;
+}
+.tc-rank.r1{color:var(--slip-red)}
+.tc-rank.r2{color:#f97316}
+.tc-rank.r3{color:var(--slip-warning)}
+
+.tc-info{}
+.tc-token-row{display:flex;align-items:center;gap:10px;margin-bottom:3px}
+.tc-symbol{font-family:"Syne",sans-serif;font-size:17px;font-weight:800;letter-spacing:-.02em}
+
+.diag-pill{
+  font-family:"Space Mono",monospace;
+  font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 9px;border-radius:var(--slip-radius-pill);
+}
+.pill-red   {color:var(--slip-red);   background:rgba(255,50,50,.12); border:1px solid rgba(255,50,50,.22)}
+.pill-amber {color:var(--slip-warning);background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.22)}
+.pill-green {color:var(--slip-success);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.22)}
+
+.tc-date{font-size:10px;color:var(--slip-text-soft)}
+
+.tc-winner-mini{
+  font-size:11px;color:var(--slip-text-soft);
+  padding:0 var(--sp4);
+  border-left:1px solid var(--slip-stroke-soft);
+  border-right:1px solid var(--slip-stroke-soft);
+  line-height:1.5;
+}
+.tc-winner-pnl{font-family:"Syne",sans-serif;font-size:13px;font-weight:700;color:var(--slip-success)}
+.tc-winner-sub{font-size:10px;color:var(--slip-text-soft);margin-top:1px}
+
+.tc-pnl{text-align:right}
+.tc-pnl-val{
+  font-family:"Syne",sans-serif;font-size:20px;font-weight:800;letter-spacing:-.04em;line-height:1;
+}
+.tc-pnl-meta{font-size:9px;color:var(--slip-text-soft);margin-top:3px;letter-spacing:.06em;text-transform:uppercase}
+
+/* Expanded detail */
+.tc-detail{display:none;border-top:1px solid var(--slip-stroke-soft)}
+.trade-card.open .tc-detail{display:block}
+
+.tc-detail-split{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:0;background:var(--slip-stroke-soft);
+}
+
+.tc-half{
+  background:rgba(255,255,255,0.02);
+  padding:22px;
+}
+
+.tc-half-title{
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+  margin-bottom:var(--sp4);
+  display:flex;align-items:center;gap:8px;
+}
+.th-you   {color:var(--slip-purple)}
+.th-winner{color:var(--slip-success)}
+
+.tc-stat{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:7px 0;border-bottom:1px solid var(--slip-stroke-soft);
+  font-size:11px;gap:12px;
+}
+.tc-stat:last-child{border-bottom:0}
+.tc-stat-key{color:var(--slip-text-soft);flex-shrink:0}
+.tc-stat-val{
+  font-family:"Syne",sans-serif;font-weight:700;font-size:13px;text-align:right;
+}
+
+.tc-diagnosis{
+  padding:16px 22px;
+  font-size:12px;line-height:1.75;
+  color:var(--slip-text-muted);
+  border-top:1px solid var(--slip-stroke-soft);
+  border-left:3px solid transparent;
+}
+.td-bought,.td-diamond{border-left-color:var(--slip-red)}
+.td-sold,.td-paper    {border-left-color:var(--slip-warning)}
+.td-good              {border-left-color:var(--slip-success)}
+.tc-diagnosis b{color:var(--slip-text);font-family:"Syne",sans-serif;font-weight:700}
+
+.tc-actions{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 22px;
+  border-top:1px solid var(--slip-stroke-soft);
+  background:rgba(255,255,255,0.01);
+}
+
+.action-btn{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 16px;border-radius:var(--slip-radius-xs);
+  font-family:"Space Mono",monospace;font-size:10px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;
+  cursor:pointer;transition:all .15s;
+  border:1px solid var(--slip-stroke-soft);
+  color:var(--slip-text-soft);
+}
+.action-btn:hover{color:var(--slip-text);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+.action-verdict{color:var(--slip-red);border-color:rgba(255,50,50,.25)}
+.action-verdict:hover{background:rgba(255,50,50,.08)}
+.action-mirror{color:var(--slip-blue);border-color:rgba(59,130,246,.25)}
+.action-mirror:hover{background:rgba(59,130,246,.08)}
+.action-x{background:#000;color:#fff;border-color:#333}
+.action-x:hover{background:#111}
+.action-share{margin-left:auto}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .canvas{padding:var(--sp6) var(--sp5) var(--sp9)}
+  .verdict-layout{grid-template-columns:1fr}
+  .mirror-layout{grid-template-columns:1fr}
+  .mirror-input-grid{grid-template-columns:1fr;border-radius:var(--slip-radius-sm)}
+  .grade-row{grid-template-columns:1fr}
+  .grade-breakdown{grid-template-columns:repeat(2,1fr)}
+  .stats-strip{grid-template-columns:repeat(2,1fr)}
+  .tc-top{grid-template-columns:36px 1fr 120px}
+  .tc-winner-mini{display:none}
+  .tc-detail-split{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- DEMO TAB SWITCHER — remove in real app, this replaces your nav -->
+<div class="demo-tabs">
+  <div class="demo-tab t-verdict active" onclick="show('verdict')">01 · Verdict</div>
+  <div class="demo-tab t-mirror"         onclick="show('mirror')">02 · Mirror</div>
+  <div class="demo-tab t-payslip"        onclick="show('payslip')">03 · Payslip</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     VERDICT
+═══════════════════════════════════════════ -->
+<div class="page active" id="p-verdict">
+<div class="canvas canvas-verdict">
+
+  <!-- Header -->
+  <div>
+    <div class="eyebrow eyebrow-verdict">
+      <span class="eyebrow-num">01</span>
+      <span class="eyebrow-sep"></span>
+      <span class="eyebrow-lbl">Verdict</span>
+    </div>
+    <h1 class="page-title">Token Safety<br>Scanner</h1>
+    <p class="page-sub">Paste any Solana token contract. Get a full verdict before you enter.</p>
+  </div>
+
+  <!-- Input -->
+  <div>
+    <div class="input-row">
+      <input id="v-input" placeholder="Token contract address..." spellcheck="false" autocomplete="off"
+        onkeydown="if(event.key==='Enter')runVerdict()">
+      <button class="btn-run btn-run-verdict" onclick="runVerdict()">Run Verdict →</button>
+    </div>
+  </div>
+
+  <!-- IDLE -->
+  <div class="idle" id="v-idle">
+    <div class="idle-checks">
+      <div class="check-row"><span class="dot dot-idle"></span>Mint Authority<span class="check-badge cb-idle">Pending</span></div>
+      <div class="check-row"><span class="dot dot-idle"></span>Freeze Authority<span class="check-badge cb-idle">Pending</span></div>
+      <div class="check-row"><span class="dot dot-idle"></span>Liquidity Lock<span class="check-badge cb-idle">Pending</span></div>
+      <div class="check-row"><span class="dot dot-idle"></span>Transfer Hook<span class="check-badge cb-idle">Pending</span></div>
+      <div class="check-row"><span class="dot dot-idle"></span>Sell Route Simulation<span class="check-badge cb-idle">Pending</span></div>
+      <div class="check-row"><span class="dot dot-idle"></span>Deployer History<span class="check-badge cb-idle">Pending</span></div>
+      <div class="check-row"><span class="dot dot-idle"></span>Entry Timing<span class="check-badge cb-idle">Pending</span></div>
+    </div>
+    <p class="idle-hint">Paste a token contract address above to run a full scan</p>
+  </div>
+
+  <!-- RESULT -->
+  <div id="v-result" style="display:none">
+  <div class="verdict-layout">
+
+    <!-- Left: main analysis -->
+    <div style="display:flex;flex-direction:column;gap:var(--sp5)">
+
+      <!-- Score hero card -->
+      <div class="card">
+        <div class="score-hero">
+          <!-- Score ring -->
+          <div class="score-ring-wrap">
+            <svg width="96" height="96" viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+              <circle cx="48" cy="48" r="40" fill="none" stroke="#f59e0b" stroke-width="6"
+                stroke-linecap="round"
+                stroke-dasharray="251.3"
+                stroke-dashoffset="163" />
+            </svg>
+            <div class="score-ring-center">
+              <span class="score-number" style="color:#f59e0b">35</span>
+              <span class="score-denom">/100</span>
+            </div>
+          </div>
+
+          <div class="score-meta">
+            <span class="v-badge v-badge-risky">High Risk</span>
+            <div class="verdict-badge-lrg" style="color:var(--slip-red)">FLAGGED</div>
+            <p class="verdict-summary">Multiple critical risks detected. Mint authority is active and LP is unlocked. Deployer has a history of rugged tokens. Do not enter without a clear exit plan at reduced size.</p>
+          </div>
+        </div>
+
+        <!-- Safety layer -->
+        <div class="check-section">
+          <div class="check-section-title">
+            <span>Safety Layer</span>
+            <span style="color:var(--slip-text-soft);font-size:10px;font-weight:400">Can you exit?</span>
+          </div>
+          <div class="check-row" style="margin-bottom:10px"><span class="dot dot-fail"></span>Mint Authority<span style="flex:1;font-size:11px;color:var(--slip-text-soft);margin-left:8px">Active — dev can print unlimited supply</span><span class="check-badge cb-fail">Critical</span></div>
+          <div class="check-row" style="margin-bottom:10px"><span class="dot dot-pass"></span>Freeze Authority<span style="flex:1;font-size:11px;color:var(--slip-text-soft);margin-left:8px">Revoked — your tokens cannot be locked</span><span class="check-badge cb-pass">Pass</span></div>
+          <div class="check-row" style="margin-bottom:10px"><span class="dot dot-fail"></span>Liquidity Lock<span style="flex:1;font-size:11px;color:var(--slip-text-soft);margin-left:8px">LP unlocked — dev can remove liquidity anytime</span><span class="check-badge cb-fail">Critical</span></div>
+          <div class="check-row" style="margin-bottom:10px"><span class="dot dot-warn"></span>Transfer Hook<span style="flex:1;font-size:11px;color:var(--slip-text-soft);margin-left:8px">Custom hook detected — sells may be taxed</span><span class="check-badge cb-warn">Warning</span></div>
+          <div class="check-row"><span class="dot dot-fail"></span>Sell Route Simulation<span style="flex:1;font-size:11px;color:var(--slip-text-soft);margin-left:8px">Simulated sell route failed — exit blocked</span><span class="check-badge cb-fail">Critical</span></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Market structure -->
+        <div class="check-section">
+          <div class="check-section-title">
+            <span>Market Structure</span>
+            <span style="color:var(--slip-text-soft);font-size:10px;font-weight:400">Is the setup healthy?</span>
+          </div>
+          <div class="check-row" style="margin-bottom:10px"><span class="dot dot-warn"></span>Top 10 Holders<span style="flex:1;font-size:11px;color:var(--slip-text-soft);margin-left:8px">68% supply — high concentration risk</span><span class="check-badge cb-warn">Warning</span></div>
+          <div class="check-row" style="margin-bottom:10px"><span class="dot dot-fail"></span>Deployer History<span style="flex:1;font-size:11px;color:var(--slip-text-soft);margin-left:8px">2 rugged tokens in deployer history</span><span class="check-badge cb-fail">Risky</span></div>
+          <div class="check-row"><span class="dot dot-pass"></span>Entry Timing<span style="flex:1;font-size:11px;color:var(--slip-text-soft);margin-left:8px">Token is 6h old — early stage, not late</span><span class="check-badge cb-pass">Early</span></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Buy/sell pressure -->
+        <div class="check-section-title" style="margin-bottom:var(--sp3)">
+          <span>Trade Pressure</span>
+          <span style="color:var(--slip-text-soft);font-size:10px;font-weight:400">Last 15m · 1h · 6h</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp3)">
+          <div class="stat-pill">
+            <span class="stat-pill-lbl">15m Ratio</span>
+            <span class="stat-pill-val" style="color:var(--slip-red);font-size:18px">38 / 62</span>
+            <span class="stat-pill-sub">Sell pressure building</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-lbl">1h Ratio</span>
+            <span class="stat-pill-val" style="font-size:18px">51 / 49</span>
+            <span class="stat-pill-sub">Roughly balanced</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-lbl">6h Ratio</span>
+            <span class="stat-pill-val" style="color:var(--slip-success);font-size:18px">64 / 36</span>
+            <span class="stat-pill-sub">Buy dominant longer term</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- Right: sidebar stats -->
+    <div class="verdict-sidebar">
+
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Market Cap</span>
+        <span class="stat-pill-val">$2.4M</span>
+        <span class="stat-pill-sub">Rank #4,821 on Solana</span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Liquidity</span>
+        <span class="stat-pill-val" style="color:var(--slip-red)">$48K</span>
+        <span class="stat-pill-sub">2.0% of mcap — thin</span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Vol / Liquidity</span>
+        <span class="stat-pill-val" style="color:var(--slip-warning)">4.1×</span>
+        <span class="stat-pill-sub">Moderate manipulation risk</span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Token Age</span>
+        <span class="stat-pill-val">6h 14m</span>
+        <span class="stat-pill-sub">Deployed today</span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Top 10 Holders</span>
+        <span class="stat-pill-val" style="color:var(--slip-warning)">68%</span>
+        <span class="stat-pill-sub">High concentration</span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Unique Wallets 30m</span>
+        <span class="stat-pill-val">142</span>
+        <span class="stat-pill-sub">↓ 40% from peak — slowing</span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Smart Money</span>
+        <span class="stat-pill-val" style="color:var(--slip-success)">2 wallets</span>
+        <span class="stat-pill-sub">Present, neither exited</span>
+      </div>
+
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">6h Price Move</span>
+        <span class="stat-pill-val" style="color:var(--slip-warning)">+118%</span>
+        <span class="stat-pill-sub">Mid-run, not blow-off</span>
+      </div>
+
+    </div>
+
+  </div><!-- /verdict-layout -->
+  </div><!-- /v-result -->
+
+</div><!-- /canvas -->
+</div><!-- /page verdict -->
+
+
+<!-- ═══════════════════════════════════════════
+     MIRROR
+═══════════════════════════════════════════ -->
+<div class="page" id="p-mirror">
+<div class="canvas canvas-mirror">
+
+  <!-- Header -->
+  <div>
+    <div class="eyebrow eyebrow-mirror">
+      <span class="eyebrow-num">02</span>
+      <span class="eyebrow-sep"></span>
+      <span class="eyebrow-lbl">Mirror</span>
+    </div>
+    <h1 class="page-title">Winner<br>Leaderboard</h1>
+    <p class="page-sub">See who is winning your token right now — and exactly how they're doing it.</p>
+  </div>
+
+  <!-- Input -->
+  <div class="mirror-input-grid" style="max-width:900px">
+    <div class="mirror-field">
+      <div class="mirror-field-lbl">Token Contract</div>
+      <input id="m-mint" type="text" placeholder="Token mint address..." spellcheck="false"/>
+    </div>
+    <div class="mirror-field">
+      <div class="mirror-field-lbl">Your Wallet (optional)</div>
+      <input id="m-wallet" type="text" placeholder="For your row..."/>
+    </div>
+    <div class="mirror-field">
+      <div class="mirror-field-lbl">Your Entry (SOL)</div>
+      <input id="m-entry" type="text" placeholder="e.g. 3.0"/>
+    </div>
+    <button class="mirror-submit" onclick="runMirror()">Find Winners →</button>
+  </div>
+
+  <!-- IDLE -->
+  <div class="idle" id="m-idle">
+    <p class="idle-hint">Enter a token mint address to rank all wallets that traded it, compare your position against the top winner, and see the winner pattern panel.</p>
+  </div>
+
+  <!-- RESULT -->
+  <div id="m-result" style="display:none">
+  <div class="mirror-layout">
+
+    <!-- Left: leaderboard -->
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--slip-text-soft);margin-bottom:var(--sp3)">
+        PEPE2 · 247 traders · ranked by realized P&L
+      </div>
+
+      <div class="lb-table">
+        <div class="lb-head">
+          <div class="lb-head-lbl">#</div>
+          <div class="lb-head-lbl">Wallet</div>
+          <div class="lb-head-lbl">P&L (SOL)</div>
+          <div class="lb-head-lbl">Entry</div>
+          <div class="lb-head-lbl">Hold</div>
+        </div>
+
+        <div class="lb-row lb-top">
+          <div class="lb-rank-n rk1">1</div>
+          <div class="lb-wallet-col">
+            <div class="lb-addr">7xKL...f3Rp <span class="lb-wallet-tag wt-smart">Smart Money</span></div>
+            <div class="lb-sub">$41k mcap · 18m after launch · Raydium</div>
+          </div>
+          <div class="lb-pnl pos">+214.8</div>
+          <div class="lb-entry">1.2 SOL</div>
+          <div class="lb-hold">14h 32m</div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank-n rk2">2</div>
+          <div class="lb-wallet-col">
+            <div class="lb-addr">9mQZ...a1Wt <span class="lb-wallet-tag wt-kol">KOL</span></div>
+            <div class="lb-sub">$58k mcap · 45m after launch · Jupiter</div>
+          </div>
+          <div class="lb-pnl pos">+88.3</div>
+          <div class="lb-entry">2.0 SOL</div>
+          <div class="lb-hold">12h 08m</div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank-n rk3">3</div>
+          <div class="lb-wallet-col">
+            <div class="lb-addr">3bNR...k9Vc <span class="lb-wallet-tag wt-bot">Bot</span></div>
+            <div class="lb-sub">$63k mcap · 52m after launch · Raydium</div>
+          </div>
+          <div class="lb-pnl pos">+61.2</div>
+          <div class="lb-entry">0.8 SOL</div>
+          <div class="lb-hold">Partial 10h</div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank-n">4</div>
+          <div class="lb-wallet-col">
+            <div class="lb-addr">DmNk...p9Xc</div>
+            <div class="lb-sub">$120k mcap · 2h 30m · Jupiter</div>
+          </div>
+          <div class="lb-pnl pos">+22.4</div>
+          <div class="lb-entry">3.5 SOL</div>
+          <div class="lb-hold">Still in</div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank-n">5</div>
+          <div class="lb-wallet-col">
+            <div class="lb-addr">LqWx...h3Bm</div>
+            <div class="lb-sub">$180k mcap · 3h 40m · Raydium</div>
+          </div>
+          <div class="lb-pnl pos">+8.7</div>
+          <div class="lb-entry">1.8 SOL</div>
+          <div class="lb-hold">Still in</div>
+        </div>
+
+        <!-- You row -->
+        <div class="lb-row lb-you">
+          <div class="lb-rank-n rk-you">YOU</div>
+          <div class="lb-wallet-col">
+            <div class="lb-addr">Hx4P...r8Dm <span class="lb-wallet-tag wt-you">You</span></div>
+            <div class="lb-sub">$240k mcap · 2h 40m · PUMP_SWAP</div>
+          </div>
+          <div class="lb-pnl neg">-14.2</div>
+          <div class="lb-entry">3.0 SOL</div>
+          <div class="lb-hold">Still in</div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank-n">13</div>
+          <div class="lb-wallet-col">
+            <div class="lb-addr">5tJK...m2Qn</div>
+            <div class="lb-sub">$310k mcap · 4h 15m · Jupiter</div>
+          </div>
+          <div class="lb-pnl neg">-31.8</div>
+          <div class="lb-entry">4.5 SOL</div>
+          <div class="lb-hold">Exited</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: gap + pattern -->
+    <div class="mirror-side">
+
+      <div class="gap-card">
+        <div class="gap-card-title">Your Position vs #1 Winner</div>
+
+        <div class="gap-vs">
+          <div class="gap-side">
+            <span class="gap-side-lbl" style="color:var(--slip-purple)">You</span>
+            <span class="gap-side-val" style="color:var(--slip-red)">-14.2 SOL</span>
+            <span class="gap-side-sub">$240k entry</span>
+          </div>
+          <div class="gap-divider">vs</div>
+          <div class="gap-side" style="text-align:right">
+            <span class="gap-side-lbl" style="color:var(--slip-success)">Winner</span>
+            <span class="gap-side-val" style="color:var(--slip-success)">+214.8 SOL</span>
+            <span class="gap-side-sub">$41k entry</span>
+          </div>
+        </div>
+
+        <div class="gap-stat"><span class="gap-stat-key">Entry timing gap</span><span class="gap-stat-val neg">2h 22m later</span></div>
+        <div class="gap-stat"><span class="gap-stat-key">Entry mcap gap</span><span class="gap-stat-val neg">+$199k vs winner</span></div>
+        <div class="gap-stat"><span class="gap-stat-key">SOL gap</span><span class="gap-stat-val neg">229 SOL behind</span></div>
+        <div class="gap-stat"><span class="gap-stat-key">Winner DEX</span><span class="gap-stat-val">Raydium direct</span></div>
+        <div class="gap-stat"><span class="gap-stat-key">Your DEX</span><span class="gap-stat-val neg">PUMP_SWAP (higher slippage)</span></div>
+      </div>
+
+      <div class="pattern-insights">
+        <div class="pi-title">◈ What Top 10 Winners Had in Common</div>
+        <div class="pi-row"><span class="pi-key">Avg entry market cap</span><span class="pi-val">$52k</span></div>
+        <div class="pi-row"><span class="pi-key">Avg hold before partial exit</span><span class="pi-val">28 min</span></div>
+        <div class="pi-row"><span class="pi-key">Most used DEX</span><span class="pi-val">Raydium (7/10)</span></div>
+        <div class="pi-row"><span class="pi-key">Took partial profits</span><span class="pi-val">8 out of 10</span></div>
+        <div class="pi-row"><span class="pi-key">Avg entry before peak</span><span class="pi-val">2h 14m earlier</span></div>
+        <div class="pi-row"><span class="pi-key">Avg position size</span><span class="pi-val">1.6 SOL</span></div>
+      </div>
+
+    </div>
+
+  </div>
+  </div><!-- /m-result -->
+
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     PAYSLIP
+═══════════════════════════════════════════ -->
+<div class="page" id="p-payslip">
+<div class="canvas canvas-payslip">
+
+  <!-- Header -->
+  <div>
+    <div class="eyebrow eyebrow-payslip">
+      <span class="eyebrow-num">03</span>
+      <span class="eyebrow-sep"></span>
+      <span class="eyebrow-lbl">Payslip</span>
+    </div>
+    <h1 class="page-title">Your Trade<br>Autopsy</h1>
+    <p class="page-sub">What it cost you, who won it, and the pattern that keeps repeating.</p>
+  </div>
+
+  <!-- Input -->
+  <div style="display:flex;align-items:center;gap:var(--sp3)">
+    <div class="input-row" style="max-width:600px">
+      <input id="ps-input" placeholder="Wallet address..." spellcheck="false" autocomplete="off"
+        onkeydown="if(event.key==='Enter')runPayslip()">
+      <button class="btn-run btn-run-payslip" onclick="runPayslip()">Generate Payslip →</button>
+    </div>
+    <button class="btn-ghost">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3" stroke-linecap="round"/></svg>
+      Connect Wallet
+    </button>
+  </div>
+
+  <!-- IDLE -->
+  <div class="idle" id="ps-idle">
+    <p class="idle-hint">Paste any Solana wallet to run a trade autopsy — grades, repeated mistake banner, and winner-vs-you comparisons on every token you traded.</p>
+  </div>
+
+  <!-- RESULT -->
+  <div id="ps-result" style="display:none;flex-direction:column;gap:var(--sp5)">
+
+    <!-- Grade row -->
+    <div class="grade-row">
+      <div class="grade-main">
+        <div class="grade-letter grade-d">D+</div>
+        <div class="grade-score">38 / 100</div>
+        <div class="grade-lbl">Overall Grade</div>
+      </div>
+      <div class="grade-breakdown">
+        <div class="grade-cell">
+          <span class="grade-cell-lbl">Entry Discipline</span>
+          <span class="grade-cell-letter grade-d">D</span>
+          <span class="grade-cell-score">32 / 100</span>
+        </div>
+        <div class="grade-cell">
+          <span class="grade-cell-lbl">Exit Discipline</span>
+          <span class="grade-cell-letter grade-c">C</span>
+          <span class="grade-cell-score">54 / 100</span>
+        </div>
+        <div class="grade-cell">
+          <span class="grade-cell-lbl">Size Management</span>
+          <span class="grade-cell-letter grade-c">C+</span>
+          <span class="grade-cell-score">61 / 100</span>
+        </div>
+        <div class="grade-cell">
+          <span class="grade-cell-lbl">Token Selection</span>
+          <span class="grade-cell-letter grade-f">F</span>
+          <span class="grade-cell-score">18 / 100</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip">
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Total P&L (30d)</span>
+        <span class="stat-pill-val" style="color:var(--slip-red)">-23.4 SOL</span>
+        <span class="stat-pill-sub">Across 10 trades</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Left on Table</span>
+        <span class="stat-pill-val" style="color:var(--slip-warning)">+61.2 SOL</span>
+        <span class="stat-pill-sub">Peak vs actual exits</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Worst Trade</span>
+        <span class="stat-pill-val" style="color:var(--slip-red)">-14.2 SOL</span>
+        <span class="stat-pill-sub">$BONK · Apr 14</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-pill-lbl">Avg Entry Percentile</span>
+        <span class="stat-pill-val">78th</span>
+        <span class="stat-pill-sub">Higher = worse timing</span>
+      </div>
+    </div>
+
+    <!-- Pattern tax banner -->
+    <div class="pattern-banner">
+      <div class="pb-icon">⚠</div>
+      <div>
+        <div class="pb-title">You bought the top 5 times this month. It cost you 48.6 SOL.</div>
+        <div class="pb-text">
+          Every time you lost, the winning wallet entered <b>11 minutes earlier</b> at a lower market cap. Your average hold time on losses is <b>4.2 hours</b>. Winners on those same tokens exited in <b>28 minutes</b>. You're not picking wrong tokens — you're entering them after the money has already been made.
+        </div>
+      </div>
+    </div>
+
+    <!-- Sort tabs -->
+    <div class="sort-row">
+      <button class="sort-btn active" onclick="setSort(this)">Worst First</button>
+      <button class="sort-btn" onclick="setSort(this)">Most Recent</button>
+      <button class="sort-btn" onclick="setSort(this)">Biggest Size</button>
+    </div>
+
+    <!-- Trade cards -->
+
+    <!-- Card 1 — BOUGHT THE TOP -->
+    <div class="trade-card tc-bought" id="tc1">
+      <div class="tc-top" onclick="toggleCard('tc1')">
+        <div class="tc-rank r1">1</div>
+        <div class="tc-info">
+          <div class="tc-token-row">
+            <span class="tc-symbol">$BONK</span>
+            <span class="diag-pill pill-red">Bought the Top</span>
+          </div>
+          <div class="tc-date">Apr 14, 2026 · 09:42 UTC</div>
+        </div>
+        <div class="tc-winner-mini">
+          <div class="tc-winner-pnl">+214.8 SOL</div>
+          <div class="tc-winner-sub">top winner · same token</div>
+          <div class="tc-winner-sub" style="color:var(--slip-red)">2h 32m before you</div>
+        </div>
+        <div class="tc-pnl">
+          <div class="tc-pnl-val" style="color:var(--slip-red)">-14.2 SOL</div>
+          <div class="tc-pnl-meta">Realized · Damage 94</div>
+        </div>
+      </div>
+
+      <div class="tc-detail">
+        <div class="tc-detail-split">
+          <div class="tc-half">
+            <div class="tc-half-title th-you">◉ Your Trade</div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Price</span><span class="tc-stat-val">$0.00001847</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Percentile</span><span class="tc-stat-val" style="color:var(--slip-red)">91st of candle</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Exit Price</span><span class="tc-stat-val">$0.00000401</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Peak After Entry</span><span class="tc-stat-val" style="color:var(--slip-success)">$0.00001902</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">SOL Spent</span><span class="tc-stat-val">18.0 SOL</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">SOL Received</span><span class="tc-stat-val" style="color:var(--slip-red)">3.8 SOL</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Left on Table</span><span class="tc-stat-val" style="color:var(--slip-warning)">+17.4 SOL</span></div>
+          </div>
+          <div class="tc-half">
+            <div class="tc-half-title th-winner">◈ Top Winner · 7XKX...SASU</div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Price</span><span class="tc-stat-val">$0.00000388</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Market Cap</span><span class="tc-stat-val" style="color:var(--slip-success)">$41k</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Timing</span><span class="tc-stat-val" style="color:var(--slip-success)">2h 32m before you</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">SOL Deployed</span><span class="tc-stat-val">18.0 SOL</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Exit Timing</span><span class="tc-stat-val">Partial at 3h 42m</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Total P&L</span><span class="tc-stat-val" style="color:var(--slip-success)">+214.8 SOL</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Used DEX</span><span class="tc-stat-val">Raydium direct</span></div>
+          </div>
+        </div>
+
+        <div class="tc-diagnosis td-bought">
+          <b>Why they won and you didn't:</b> Same token, same size, completely different outcome. The winner entered 2h 32m before you at <b>$41k market cap</b>. By the time you entered at <b>$240k market cap</b>, they were sitting on a 5x and planning their exit. You were their exit liquidity. They used Raydium direct — lower slippage than your route. They took partial profits at 3h 42m. You held through their sell pressure and caught the dump.
+        </div>
+
+        <div class="tc-actions">
+          <button class="action-btn action-verdict">⚖ Run Verdict on $BONK</button>
+          <button class="action-btn action-mirror">🪞 Full Mirror →</button>
+          <button class="action-btn action-x action-share">𝕏 Post</button>
+          <button class="action-btn action-share" style="margin-left:auto">Share Payslip</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 — PAPER HANDS -->
+    <div class="trade-card tc-paper" id="tc2">
+      <div class="tc-top" onclick="toggleCard('tc2')">
+        <div class="tc-rank r2">2</div>
+        <div class="tc-info">
+          <div class="tc-token-row">
+            <span class="tc-symbol">$WIF</span>
+            <span class="diag-pill pill-amber">Paper Hands</span>
+          </div>
+          <div class="tc-date">Apr 11, 2026 · 14:17 UTC</div>
+        </div>
+        <div class="tc-winner-mini">
+          <div class="tc-winner-pnl">+88.3 SOL</div>
+          <div class="tc-winner-sub">top winner · same token</div>
+          <div class="tc-winner-sub" style="color:var(--slip-text-soft)">Similar entry timing</div>
+        </div>
+        <div class="tc-pnl">
+          <div class="tc-pnl-val" style="color:var(--slip-success)">+2.1 SOL</div>
+          <div class="tc-pnl-meta">Realized · Damage 71</div>
+        </div>
+      </div>
+
+      <div class="tc-detail">
+        <div class="tc-detail-split">
+          <div class="tc-half">
+            <div class="tc-half-title th-you">◉ Your Trade</div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Price</span><span class="tc-stat-val">$1.42</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Percentile</span><span class="tc-stat-val" style="color:var(--slip-success)">34th of candle</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Exit Price</span><span class="tc-stat-val">$1.61</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Peak After Entry</span><span class="tc-stat-val" style="color:var(--slip-success)">$2.34</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">SOL Spent</span><span class="tc-stat-val">12.0 SOL</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Left on Table</span><span class="tc-stat-val" style="color:var(--slip-warning)">+10.7 SOL</span></div>
+          </div>
+          <div class="tc-half">
+            <div class="tc-half-title th-winner">◈ Top Winner · 3PQR...MN7X</div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Price</span><span class="tc-stat-val">$1.39</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Timing</span><span class="tc-stat-val">Same window as you</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Exit Price</span><span class="tc-stat-val" style="color:var(--slip-success)">$2.30</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Hold Through Pullbacks</span><span class="tc-stat-val">3 pullbacks held</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Total P&L</span><span class="tc-stat-val" style="color:var(--slip-success)">+88.3 SOL</span></div>
+          </div>
+        </div>
+
+        <div class="tc-diagnosis td-paper">
+          <b>Your entry was correct — 34th percentile, near the candle low.</b> Same entry as the winner. But you exited at +13% into the move. The winner held through 3 pullbacks and sold near $2.30. Your entry discipline was right. Your exit discipline cost you 10.7 SOL. This is a patience problem, not a conviction problem.
+        </div>
+
+        <div class="tc-actions">
+          <button class="action-btn action-verdict">⚖ Run Verdict on $WIF</button>
+          <button class="action-btn action-mirror">🪞 Full Mirror →</button>
+          <button class="action-btn action-x action-share">𝕏 Post</button>
+          <button class="action-btn action-share" style="margin-left:auto">Share Payslip</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 — GOOD TRADE -->
+    <div class="trade-card tc-good" id="tc3">
+      <div class="tc-top" onclick="toggleCard('tc3')">
+        <div class="tc-rank r3">3</div>
+        <div class="tc-info">
+          <div class="tc-token-row">
+            <span class="tc-symbol">$JUP</span>
+            <span class="diag-pill pill-green">Good Trade</span>
+          </div>
+          <div class="tc-date">Apr 05, 2026 · 08:11 UTC</div>
+        </div>
+        <div class="tc-winner-mini">
+          <div class="tc-winner-pnl" style="color:var(--slip-text-muted)">+5.8 SOL</div>
+          <div class="tc-winner-sub">top winner · same token</div>
+          <div class="tc-winner-sub" style="color:var(--slip-success)">Captured 91% of move</div>
+        </div>
+        <div class="tc-pnl">
+          <div class="tc-pnl-val" style="color:var(--slip-success)">+5.3 SOL</div>
+          <div class="tc-pnl-meta">Realized · Damage 4</div>
+        </div>
+      </div>
+
+      <div class="tc-detail">
+        <div class="tc-detail-split">
+          <div class="tc-half">
+            <div class="tc-half-title th-you">◉ Your Trade</div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Price</span><span class="tc-stat-val">$0.00341</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Percentile</span><span class="tc-stat-val" style="color:var(--slip-success)">28th of candle</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Exit Price</span><span class="tc-stat-val" style="color:var(--slip-success)">$0.00523</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Peak After Entry</span><span class="tc-stat-val" style="color:var(--slip-success)">$0.00561</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">SOL Spent</span><span class="tc-stat-val">6.0 SOL</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Left on Table</span><span class="tc-stat-val" style="color:var(--slip-success)">+0.5 SOL</span></div>
+          </div>
+          <div class="tc-half">
+            <div class="tc-half-title th-winner">◈ Top Winner</div>
+            <div class="tc-stat"><span class="tc-stat-key">Entry Timing</span><span class="tc-stat-val">Similar to yours</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Total P&L</span><span class="tc-stat-val" style="color:var(--slip-success)">+5.8 SOL</span></div>
+            <div class="tc-stat"><span class="tc-stat-key">Your Capture Rate</span><span class="tc-stat-val" style="color:var(--slip-success)">91% of the move</span></div>
+          </div>
+        </div>
+
+        <div class="tc-diagnosis td-good">
+          <b>Solid trade.</b> Low entry percentile, clean hold, exited close to peak. You captured 91% of the available move. This is the template. Repeat this.
+        </div>
+
+        <div class="tc-actions">
+          <button class="action-btn action-mirror">🪞 Full Mirror →</button>
+          <button class="action-btn action-x action-share">𝕏 Post</button>
+          <button class="action-btn action-share" style="margin-left:auto">Share Payslip</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /ps-result -->
+
+</div>
+</div>
+
+
+<script>
+/* ── TAB SWITCHING ── */
+function show(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.demo-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+id).classList.add('active');
+  document.querySelector('.t-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+/* ── VERDICT ── */
+function runVerdict(){
+  const v=document.getElementById('v-input').value.trim();
+  if(!v)return;
+  document.getElementById('v-idle').style.display='none';
+  const r=document.getElementById('v-result');
+  r.style.display='block';
+  r.style.animation='fadeUp .3s ease both';
+}
+
+/* ── MIRROR ── */
+function runMirror(){
+  const v=document.getElementById('m-mint').value.trim();
+  if(!v)return;
+  document.getElementById('m-idle').style.display='none';
+  const r=document.getElementById('m-result');
+  r.style.display='block';
+  r.style.animation='fadeUp .3s ease both';
+}
+
+/* ── PAYSLIP ── */
+function runPayslip(){
+  const v=document.getElementById('ps-input').value.trim();
+  if(!v)return;
+  document.getElementById('ps-idle').style.display='none';
+  const r=document.getElementById('ps-result');
+  r.style.display='flex';
+  r.style.animation='fadeUp .3s ease both';
+}
+
+/* ── TRADE CARD EXPAND ── */
+function toggleCard(id){
+  const card=document.getElementById(id);
+  const was=card.classList.contains('open');
+  document.querySelectorAll('.trade-card.open').forEach(c=>c.classList.remove('open'));
+  if(!was)card.classList.add('open');
+}
+
+/* ── SORT TABS ── */
+function setSort(btn){
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

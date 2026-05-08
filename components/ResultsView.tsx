@@ -1,157 +1,92 @@
-'use client';
-
-import { useState } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import TradeCard from '@/components/TradeCard';
-import ScoreBadge from '@/components/ScoreBadge';
-import { TradeAnalysis, WalletSummary } from '@/types';
-import { fadeUp } from '@/lib/motion';
-
-interface ResultsViewProps {
-  wallet: string;
-  analyses: TradeAnalysis[];
-  summary: WalletSummary;
-}
-
-type SortMode = 'worst' | 'recent' | 'size';
-
-function shortWallet(w: string) {
-  return `${w.slice(0, 6)}...${w.slice(-4)}`;
-}
-
-function formatSol(n: number, sign = false): string {
-  const s = sign && n > 0 ? '+' : '';
-  return `${s}${n.toFixed(2)} SOL`;
-}
-
-export default function ResultsView({ wallet, analyses, summary }: ResultsViewProps) {
-  const [sort, setSort] = useState<SortMode>('worst');
-
-  const sorted = [...analyses].sort((a, b) => {
-    if (sort === 'worst') return b.damageScore - a.damageScore;
-    if (sort === 'recent') return b.entryTimestamp - a.entryTimestamp;
-    if (sort === 'size') return b.solSpent - a.solSpent;
-    return 0;
-  });
-
-  const gradeClass = `score-${summary.overallGrade.toLowerCase()}`;
-
+export default function ResultsView({ data, openCard, setOpenCard, onVerdict, onMirror }: {
+  data: any;
+  openCard: string | null;
+  setOpenCard: (id: string | null) => void;
+  onVerdict: (s: string, m: string) => void;
+  onMirror: (s: string, m: string) => void;
+}) {
   return (
-    <>
-      {/* ── Results header ── */}
-      <div className="results-header animate-fade-up">
-        <div className="results-wallet-tag">
-          Analyzed · {shortWallet(wallet)}
+    <div className="ds-fade-up">
+      {/* ── Top row: Grade + Breakdown ── */}
+      <div className="ds-payslip-grid">
+        <div className="ds-grade-hero">
+          <div className="ds-grade-letter" style={{
+            color: data.grades.overall.grade.startsWith('A') ? 'var(--slip-success)' :
+                   data.grades.overall.grade.startsWith('B') ? 'var(--slip-blue)' :
+                   data.grades.overall.grade.startsWith('C') ? 'var(--slip-warning)' :
+                   'var(--slip-red)'
+          }}>
+            {data.grades.overall.grade}
+          </div>
+          <div className="ds-grade-lbl">{data.grades.overall.score} / 100 SCORE</div>
         </div>
-        <h1 className="results-title">
-          Your Trade Autopsy
-          <ScoreBadge grade={summary.overallGrade} />
-        </h1>
-        <div className="results-meta">
-          <span>
-            <b>{summary.tradesAnalyzed}</b>&nbsp;trades analyzed
-          </span>
-          <span>
-            <b style={{ color: summary.totalPnlSOL >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {formatSol(summary.totalPnlSOL, true)}
-            </b>
-            &nbsp;total P&amp;L
-          </span>
-          {summary.totalLeftOnTable > 0 && (
-            <span>
-              <b style={{ color: 'var(--orange)' }}>
-                +{formatSol(summary.totalLeftOnTable)}
-              </b>
-              &nbsp;left on table
-            </span>
-          )}
+        
+        <div className="ds-grade-breakdown">
+          <GradeItem label="Entry Discipline" grade={data.grades.entryDiscipline.grade} />
+          <GradeItem label="Exit Discipline" grade={data.grades.exitDiscipline.grade} />
+          <GradeItem label="Size Management" grade={data.grades.sizeManagement.grade} />
+          <GradeItem label="Token Selection" grade={data.grades.tokenSelection.grade} />
         </div>
       </div>
 
       {/* ── Summary strip ── */}
-      <div className="summary-strip">
-        <div className="summary-cell">
-          <div className="summary-label">Worst Trade</div>
-          <div className={`summary-val ${summary.worstTradePnl < 0 ? 'val-red' : 'val-green'}`}>
-            {formatSol(summary.worstTradePnl, true)}
-          </div>
-        </div>
-        <div className="summary-cell">
-          <div className="summary-label">Left on Table</div>
-          <div className="summary-val val-orange">
-            {summary.totalLeftOnTable > 0 ? `+${formatSol(summary.totalLeftOnTable)}` : '—'}
-          </div>
-        </div>
-        <div className="summary-cell">
-          <div className="summary-label">Avg Entry Pct</div>
-          <div className="summary-val val-text">
-            {summary.avgEntryPercentile !== null
-              ? `${summary.avgEntryPercentile.toFixed(0)}th`
-              : '—'}
-          </div>
-        </div>
-        <div className="summary-cell">
-          <div className="summary-label">Damage Score</div>
-          <div className="summary-val val-red">
-            {summary.avgDamageScore.toFixed(0)}/100
-          </div>
-        </div>
+      <div className="ds-summary-strip">
+        <SummaryItem label="Total P&L" val={`${data.summary.totalPnlSol >= 0 ? '+' : ''}${data.summary.totalPnlSol.toFixed(1)} SOL`} sub={`Across ${data.summary.tradesAnalyzed} trades`} tone={data.summary.totalPnlSol >= 0 ? 'pass' : 'fail'} />
+        <SummaryItem label="Left on Table" val={`+${data.summary.totalLeftOnTable.toFixed(1)} SOL`} sub="Peak vs actual exits" tone="warn" />
+        <SummaryItem label="Worst Trade" val={`${data.summary.worstTradePnl.toFixed(1)} SOL`} sub="Realized loss" tone="fail" />
+        <SummaryItem label="Avg Entry Pct" val={`${data.summary.avgEntryPercentile || 0}th`} sub="Timing score" />
       </div>
 
-      {/* ── Sort tabs ── */}
-      <div className="sort-tabs">
-        {(['worst', 'recent', 'size'] as SortMode[]).map((mode) => (
-          <button
-            key={mode}
-            className={`sort-tab ${sort === mode ? 'active' : ''}`}
-            onClick={() => setSort(mode)}
-          >
-            {mode === 'worst' ? 'Worst First' : mode === 'recent' ? 'Most Recent' : 'Biggest Size'}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Trades ── */}
-      {sorted.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">🔍</div>
-          <div className="empty-title">No trades to show</div>
-          <p>This wallet has no analyzable swap history. Try a different address.</p>
+      {/* ── Repeat Mistake Banner ── */}
+      {data.banner && (
+        <div className="ds-mistake-banner">
+          <span className="ds-mb-icon">⚠</span>
+          <div className="ds-mb-body">
+            <div className="ds-mb-title">{data.banner.title}</div>
+            <div className="ds-mb-text">{data.banner.body}</div>
+          </div>
         </div>
-      ) : (
-        <motion.div
-          className="trades-list"
-          initial="hidden"
-          animate="visible"
-        >
-          {sorted.map((trade, i) => (
-            <motion.div
-              key={[
-                trade.signature,
-                trade.tokenMint,
-                trade.entryTimestamp,
-                trade.exitTimestamp ?? 'open',
-                trade.solSpent.toFixed(6),
-              ].join(':')}
-              variants={fadeUp}
-              custom={i}
-            >
-              <TradeCard
-                trade={trade}
-                rank={i + 1}
-                wallet={wallet}
-              />
-            </motion.div>
-          ))}
-        </motion.div>
       )}
 
-      {/* ── Back link ── */}
-      <Link href="/" className="btn-new">
-        ← Analyze another wallet
-      </Link>
-    </>
+      {/* ── Trades ── */}
+      <div className="ds-section-lbl" style={{ marginTop: 40, marginBottom: 20 }}>Trade Breakdown</div>
+      {data.trades.map((trade: any, i: number) => (
+        <TradeCard
+          key={trade.id}
+          trade={trade}
+          rank={i + 1}
+          isOpen={openCard === trade.id}
+          onToggle={() => setOpenCard(openCard === trade.id ? null : trade.id)}
+          onVerdict={onVerdict}
+          onMirror={onMirror}
+        />
+      ))}
+    </div>
+  );
+}
+
+function GradeItem({ label, grade }: { label: string; grade: string }) {
+  return (
+    <div className="ds-grade-item">
+      <div className="ds-gi-lbl">{label}</div>
+      <div className="ds-gi-val" style={{
+        color: grade.startsWith('A') ? 'var(--slip-success)' :
+               grade.startsWith('B') ? 'var(--slip-blue)' :
+               grade.startsWith('C') ? 'var(--slip-warning)' :
+               'var(--slip-red)'
+      }}>{grade}</div>
+    </div>
+  );
+}
+
+function SummaryItem({ label, val, sub, tone }: { label: string; val: string; sub: string; tone?: string }) {
+  const color = tone === 'pass' ? 'var(--slip-success)' : tone === 'warn' ? 'var(--slip-warning)' : tone === 'fail' ? 'var(--slip-red)' : 'var(--slip-text)';
+  return (
+    <div className="ds-summary-item">
+      <div className="ds-si-lbl">{label}</div>
+      <div className="ds-si-val" style={{ color }}>{val}</div>
+      <div className="ds-si-sub">{sub}</div>
+    </div>
   );
 }
 
