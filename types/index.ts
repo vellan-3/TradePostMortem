@@ -60,6 +60,8 @@ export interface MirrorLeaderboardRow {
   totalPnlSol: number;
   roi: number;
   holdDisplay: string;
+  entrySub: string;
+  entrySol: number | null;
   entryLine: string;
   entryMarketCap: number | null;
   entryTimestamp: number | null;
@@ -95,6 +97,7 @@ export interface MirrorPatternInsights {
 export interface MirrorViewModel {
   mint: string;
   symbol: string;
+  totalTraders: number;
   leaderboard: MirrorLeaderboardRow[];
   yourRow: MirrorLeaderboardRow | null;
   comparison: MirrorComparison | null;

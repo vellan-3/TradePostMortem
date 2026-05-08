@@ -95,6 +95,7 @@ export async function getMirrorData(
     const pnlPct = (pnlSol / resolvedSolDeployed) * 100;
     
     const estimatedEntryMcap = estimateEntryMarketCap(topWinner?.entryMarketCap ?? 52000, leaderboard.length + 1);
+    const entryLine = `Entered $${formatCompactUsd(estimatedEntryMcap)} mcap · ${timeAgo(resolvedEntryTimestamp)} · via ${resolvedDex ?? 'Jupiter'}`;
     yourRow = {
       wallet: userWalletAddress ?? 'you',
       walletLabel: userWalletAddress ? `${userWalletAddress.slice(0, 4)}...${userWalletAddress.slice(-4)}` : 'Your Wallet',
@@ -102,7 +103,9 @@ export async function getMirrorData(
       totalPnlSol: round2(pnlSol),
       roi: round1(pnlPct),
       holdDisplay: 'Still in',
-      entryLine: `Entered $${formatCompactUsd(estimatedEntryMcap)} mcap · ${timeAgo(resolvedEntryTimestamp)} · via ${resolvedDex ?? 'Jupiter'}`,
+      entrySub: entryLine,
+      entrySol: round1(resolvedSolDeployed),
+      entryLine,
       entryMarketCap: estimatedEntryMcap,
       entryTimestamp: resolvedEntryTimestamp,
       dex: resolvedDex ?? 'Jupiter',
@@ -146,6 +149,7 @@ export async function getMirrorData(
   return {
     mint,
     symbol,
+    totalTraders: leaderboard.length,
     leaderboard,
     yourRow,
     comparison,
@@ -163,6 +167,8 @@ function toLeaderboardRow(trader: any, index: number, solPrice: number): MirrorL
   const entryTimestamp = Math.floor(Date.now() / 1000) - (index * 48 + 80) * 60;
   const dex = inferDex(trader, index);
   const holdDisplay = inferHoldDisplay(index);
+  const sizeSol = solPrice > 0 && volumeBuyUsd > 0 ? round1(volumeBuyUsd / solPrice) : null;
+  const entryLine = `Entered $${formatCompactUsd(entryMarketCap)} mcap · ${timeAgo(entryTimestamp)} · via ${dex}`;
   return {
     wallet: trader?.owner ?? `winner-${index}`,
     walletLabel: trader?.owner ? `${trader.owner.slice(0, 4)}...${trader.owner.slice(-4)}` : `Winner ${index + 1}`,
@@ -170,11 +176,13 @@ function toLeaderboardRow(trader: any, index: number, solPrice: number): MirrorL
     totalPnlSol: solPrice > 0 ? round1(totalPnlUsd / solPrice) : 0,
     roi: volumeBuyUsd > 0 ? round1((totalPnlUsd / volumeBuyUsd) * 100) : 0,
     holdDisplay,
-    entryLine: `Entered $${formatCompactUsd(entryMarketCap)} mcap · ${timeAgo(entryTimestamp)} · via ${dex}`,
+    entrySub: entryLine,
+    entrySol: sizeSol,
+    entryLine,
     entryMarketCap,
     entryTimestamp,
     dex,
-    sizeSol: solPrice > 0 && volumeBuyUsd > 0 ? round1(volumeBuyUsd / solPrice) : null,
+    sizeSol,
     tookPartialProfits: holdDisplay.startsWith('Partial'),
     confidence: {
       entryMarketCap: 'estimated',
@@ -334,21 +342,26 @@ export async function getWinnerDataWithFallback(
       tag: null,
     }));
 
-    mirrorData.leaderboard = topHolders.map(holder => ({
-      wallet: holder.address,
-      walletLabel: `${holder.address.slice(0, 4)}...${holder.address.slice(-4)}`,
-      tag: 'Top Holder',
-      totalPnlSol: 0,
-      roi: 0,
-      holdDisplay: 'Current Holder',
-      entryLine: `Holding ${formatCompactUsd(holder.amount)} tokens`,
-      entryMarketCap: null,
-      entryTimestamp: null,
-      dex: null,
-      sizeSol: null,
-      tookPartialProfits: false,
-      confidence: { entryMarketCap: 'unavailable', dex: 'unavailable', hold: 'unavailable', entryTiming: 'unavailable' },
-    }));
+    mirrorData.leaderboard = topHolders.map(holder => {
+      const entryLine = `Holding ${formatCompactUsd(holder.amount)} tokens`;
+      return {
+        wallet: holder.address,
+        walletLabel: `${holder.address.slice(0, 4)}...${holder.address.slice(-4)}`,
+        tag: 'Top Holder',
+        totalPnlSol: 0,
+        roi: 0,
+        holdDisplay: 'Current Holder',
+        entrySub: entryLine,
+        entrySol: null,
+        entryLine,
+        entryMarketCap: null,
+        entryTimestamp: null,
+        dex: null,
+        sizeSol: null,
+        tookPartialProfits: false,
+        confidence: { entryMarketCap: 'unavailable', dex: 'unavailable', hold: 'unavailable', entryTiming: 'unavailable' },
+      };
+    });
 
     return { mirrorData, topHolders, dataSource: 'holders' };
   } catch {
