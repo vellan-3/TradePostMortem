@@ -7,34 +7,7 @@ const HEADERS = {
   'X-API-KEY': BIRDEYE_KEY,
 };
 
-// Request-level cache to prevent redundant fetches during a single analysis run
-const requestCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5000; // 5 seconds
-
-async function cachedFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  if (options.method && options.method !== 'GET') return fetch(url, options);
-  
-  const now = Date.now();
-  const cached = requestCache.get(url);
-  if (cached && (now - cached.timestamp < CACHE_TTL)) {
-    return new Response(JSON.stringify(cached.data), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
-    });
-  }
-
-  const res = await fetch(url, { ...options, cache: 'no-store' });
-  if (res.ok) {
-    const data = await res.json();
-    requestCache.set(url, { data, timestamp: now });
-    // Return a fresh response from the data we just parsed
-    return new Response(JSON.stringify(data), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
-    });
-  }
-  return res;
-}
+// Caching removed to prevent cross-talk between different token scans on Vercel
 
 export interface OHLCVBar {
   o: number;
