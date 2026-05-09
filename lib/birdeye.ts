@@ -37,7 +37,7 @@ export async function getBatchTokenMeta(
   const unique = [...new Set(mints)].slice(0, 50);
 
   try {
-    const res = await cachedFetch(`${BASE}/defi/v3/token/meta-data/multiple`, {
+    const res = await fetch(`${BASE}/defi/v3/token/meta-data/multiple`, {
       method: 'POST',
       headers: {
         ...HEADERS,
@@ -94,7 +94,7 @@ export async function getPriceAtTimestamp(
   timestamp: number
 ): Promise<number | null> {
   try {
-    const res = await cachedFetch(
+    const res = await fetch(
       `${BASE}/defi/historical_price_unix?address=${mint}&unixtime=${timestamp}`,
       { headers: HEADERS }
     );
@@ -130,7 +130,7 @@ export async function getHistoricalPrice(
 
 export async function getCurrentPrice(mint: string): Promise<number | null> {
   try {
-    const res = await cachedFetch(`${BASE}/defi/price?address=${mint}`, {
+    const res = await fetch(`${BASE}/defi/price?address=${mint}`, {
       headers: HEADERS,
     });
     if (!res.ok) return null;
@@ -148,7 +148,7 @@ export async function getOHLCV(
   interval = '15m'
 ): Promise<OHLCVBar[]> {
   try {
-    const res = await cachedFetch(
+    const res = await fetch(
       `${BASE}/defi/v3/ohlcv?address=${mint}&type=${interval}&time_from=${timeFrom}&time_to=${timeTo}`,
       { headers: HEADERS }
     );
@@ -239,7 +239,7 @@ export async function getPeakPriceAfterEntry(
 
 async function getRecentTokenTrades(mint: string, limit: number): Promise<BirdeyeTrade[]> {
   try {
-    const res = await cachedFetch(`${BASE}/defi/txs/token?address=${mint}&limit=${limit}&tx_type=swap`, {
+    const res = await fetch(`${BASE}/defi/txs/token?address=${mint}&limit=${limit}&tx_type=swap`, {
       headers: HEADERS,
     });
     if (!res.ok) return [];
