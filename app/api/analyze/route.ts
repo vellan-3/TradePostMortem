@@ -40,6 +40,13 @@ interface TradeCandidate {
 }
 
 export async function GET(req: NextRequest) {
+  if (!process.env.HELIUS_API_KEY || !process.env.BIRDEYE_API_KEY) {
+    return NextResponse.json({ 
+      error: 'API Keys Missing', 
+      detail: 'HELIUS_API_KEY or BIRDEYE_API_KEY is not set in environment variables. Please add them to your Vercel project settings.' 
+    }, { status: 500 });
+  }
+
   const wallet = cleanSolanaAddress(req.nextUrl.searchParams.get('wallet'));
   if (!wallet) {
     return NextResponse.json({ error: 'wallet parameter required' }, { status: 400 });

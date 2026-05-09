@@ -38,9 +38,14 @@ export async function getMirrorData(
       traders = data?.data?.items ?? [];
       symbol = data?.data?.symbol ?? 'UNKNOWN';
     } else {
-      console.warn(`[getMirrorData] Birdeye API returned ${res.status}, using fallback data`);
+      const text = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(`Birdeye API Auth Error (${res.status}). Check BIRDEYE_API_KEY.`);
+      }
+      console.warn(`[getMirrorData] Birdeye API returned ${res.status}: ${text}`);
     }
   } catch (err) {
+    if (err instanceof Error && err.message.includes('Birdeye API Auth Error')) throw err;
     console.warn(`[getMirrorData] Fetch failed: ${String(err)}, using fallback data`);
   }
 

@@ -4,6 +4,13 @@ import { PublicKey } from '@solana/web3.js';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+  if (!process.env.HELIUS_API_KEY || !process.env.BIRDEYE_API_KEY) {
+    return NextResponse.json({ 
+      error: 'API Keys Missing', 
+      detail: 'HELIUS_API_KEY or BIRDEYE_API_KEY is not set in environment variables. Please add them to your Vercel project settings.' 
+    }, { status: 500 });
+  }
+
   const mint = searchParams.get('mint');
 
   if (!mint) {
