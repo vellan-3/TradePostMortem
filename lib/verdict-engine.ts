@@ -23,10 +23,13 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
     // leave unknown
   }
 
-  const rugReport = await getTokenReport(mint);
-  if (!rugReport) {
-    throw new Error('RugCheck report unavailable for this token. This usually means the token is too new or the RugCheck API is unreachable.');
+  let rugReport = null;
+  try {
+    rugReport = await getTokenReport(mint);
+  } catch (e) {
+    console.warn('[verdict] RugCheck failed, continuing with partial data:', e);
   }
+  
   const tokenMeta = rugReport?.tokenMeta ?? rugReport?.token_extensions?.tokenMetadata ?? null;
   symbol = tokenMeta?.symbol ?? symbol;
   name = tokenMeta?.name ?? name;

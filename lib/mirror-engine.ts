@@ -64,8 +64,11 @@ export async function getMirrorData(
       console.warn(`[getMirrorData] Birdeye API returned ${res.status}: ${text}`);
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes('Birdeye API Auth Error')) throw err;
-    console.warn(`[getMirrorData] Fetch failed: ${String(err)}, using fallback data`);
+    if (err instanceof Error && err.message.includes('Birdeye API Auth Error')) {
+       console.warn('[getMirrorData] Birdeye Auth Error (likely non-premium key). Proceeding with empty traders list.');
+    } else {
+       console.warn(`[getMirrorData] Fetch failed: ${String(err)}, using fallback data`);
+    }
   }
 
   const leaderboard = traders
