@@ -17,11 +17,15 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
 
   try {
     const mintInfo = await connection.getParsedAccountInfo(new PublicKey(mint));
+    if (!mintInfo.value) {
+      throw new Error('Token mint account was not found on Solana mainnet.');
+    }
     const mintData = (mintInfo.value?.data as any)?.parsed?.info;
     mintAuthority = mintData?.mintAuthority ?? null;
     freezeAuthority = mintData?.freezeAuthority ?? null;
-  } catch {
-    // leave unknown
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Solana RPC mint lookup failed: ${message}`);
   }
 
   let rugReport = null;
@@ -35,8 +39,11 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
   symbol = tokenMeta?.symbol ?? symbol;
   name = tokenMeta?.name ?? name;
 
+  const hasRugReport = Boolean(rugReport);
   const markets = Array.isArray(rugReport?.markets) ? rugReport.markets : [];
+  const hasMarkets = markets.length > 0;
   const topHolders = Array.isArray(rugReport?.topHolders) ? rugReport.topHolders : [];
+  const hasTopHolders = topHolders.length > 0;
   const top10HolderPct = topHolders
     .slice(0, 10)
     .reduce((sum: number, holder: any) => sum + Number(holder?.pct ?? 0), 0);
@@ -58,28 +65,32 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
     0,
     ...markets.map((market: any) => Number(market?.lp?.lpLockedPct ?? 0))
   );
-  const lpLocked = lpLockedPct >= 95 || rugReport?.lockerScanStatus === 'locked';
-  const transferHook = Boolean(rugReport?.token_extensions?.transferHook);
+  const lpLocked = hasMarkets ? lpLockedPct >= 95 || rugReport?.lockerScanStatus === 'locked' : null;
+  const transferHook = hasRugReport ? Boolean(rugReport?.token_extensions?.transferHook) : null;
   const creator = rugReport?.creator ?? null;
 
   const now = Math.floor(Date.now() / 1000);
   const ohlcv = await getOHLCV(mint, now - 21600, now, '15m');
   const firstCandle = ohlcv[0];
   const latestCandle = ohlcv[ohlcv.length - 1];
+  const hasPriceHistory = Boolean(firstCandle && latestCandle && firstCandle.o > 0);
   const priceMove6h =
-    firstCandle && latestCandle && firstCandle.o > 0
+    hasPriceHistory
       ? ((latestCandle.c - firstCandle.o) / firstCandle.o) * 100
       : 0;
 
   const volumeLiquidityRatio = liquidityUsd > 0 ? volume24hUsd / liquidityUsd : 0;
   
   // Estimate pressure from price move and volume ratio
-  let buyPressureRatio = 50;
-  if (priceMove6h > 20) buyPressureRatio = 65;
-  else if (priceMove6h > 100) buyPressureRatio = 80;
-  else if (priceMove6h < -20) buyPressureRatio = 35;
+  let buyPressureRatio: number | null = null;
+  if (hasPriceHistory) {
+    if (priceMove6h > 100) buyPressureRatio = 80;
+    else if (priceMove6h > 20) buyPressureRatio = 65;
+    else if (priceMove6h < -20) buyPressureRatio = 35;
+    else buyPressureRatio = 50;
+  }
   
-  const sellPressureRatio = 100 - buyPressureRatio;
+  const sellPressureRatio = buyPressureRatio === null ? null : 100 - buyPressureRatio;
   const smartMoneyCount = topHolders.slice(0, 10).filter((holder: any) => Number(holder?.pct ?? 0) < 5).length;
   const isLate = priceMove6h > 180;
   const verdictScore = computeScore({
@@ -87,8 +98,8 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
     freezeAuthorityActive: Boolean(freezeAuthority),
     lpLocked,
     transferHook,
-    top10HolderPct,
-    priceMove6h,
+    top10HolderPct: hasTopHolders ? top10HolderPct : null,
+    priceMove6h: hasPriceHistory ? priceMove6h : null,
   });
   const verdict = verdictFromScore(verdictScore);
 
@@ -113,40 +124,48 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
     },
     {
       name: 'Liquidity Lock',
-      detail: lpLocked
+      detail: lpLocked === null
+        ? 'Liquidity lock status is unavailable because the token market report did not return pool data.'
+        : lpLocked
         ? `LP appears locked (${lpLockedPct.toFixed(0)}% locked across tracked pools).`
         : 'LP is NOT locked. Developer can remove all liquidity at any time. High rug risk if momentum fades.',
-      status: lpLocked ? 'pass' : 'critical',
-      badge: lpLocked ? 'PASS' : 'CRITICAL',
-      confidence: 'live',
+      status: lpLocked === null ? 'warning' : lpLocked ? 'pass' : 'critical',
+      badge: lpLocked === null ? 'INFO' : lpLocked ? 'PASS' : 'CRITICAL',
+      confidence: lpLocked === null ? 'unavailable' : 'live',
     },
     {
       name: 'Transfer Hook',
-      detail: transferHook
+      detail: transferHook === null
+        ? 'Transfer hook status is unavailable because the token report did not return extension data.'
+        : transferHook
         ? 'Custom transfer hooks detected. Sell behavior may be restricted or taxed.'
         : 'No custom transfer hooks. Standard token behavior. Sells execute normally.',
-      status: transferHook ? 'critical' : 'pass',
-      badge: transferHook ? 'CRITICAL' : 'PASS',
-      confidence: 'live',
+      status: transferHook === null ? 'warning' : transferHook ? 'critical' : 'pass',
+      badge: transferHook === null ? 'INFO' : transferHook ? 'CRITICAL' : 'PASS',
+      confidence: transferHook === null ? 'unavailable' : 'live',
     },
     {
       name: 'Sell Route Simulation',
-      detail: lpLocked || liquidityUsd > 0
+      detail: hasMarkets && (lpLocked || liquidityUsd > 0)
         ? 'Simulated a sell route from tracked liquidity. Route looks available, but this is still a simulated path and not a signed transaction.'
-        : 'No reliable live route depth found. Treat the sell path as unverified until you simulate it yourself.',
-      status: lpLocked || liquidityUsd > 0 ? 'pass' : 'warning',
-      badge: lpLocked || liquidityUsd > 0 ? 'PASS' : 'WARNING',
-      confidence: 'simulated',
+        : hasMarkets
+        ? 'No reliable live route depth found. Treat the sell path as unverified until you simulate it yourself.'
+        : 'Sell route data is unavailable because the token market report did not return pool data.',
+      status: hasMarkets && (lpLocked || liquidityUsd > 0) ? 'pass' : 'warning',
+      badge: hasMarkets && (lpLocked || liquidityUsd > 0) ? 'PASS' : hasMarkets ? 'WARNING' : 'INFO',
+      confidence: hasMarkets ? 'simulated' : 'unavailable',
     },
   ];
 
   const marketStructure: VerdictCheckRow[] = [
     {
       name: 'Top 10 Holder Concentration',
-      detail: `Top 10 wallets hold ${top10HolderPct.toFixed(1)}% of supply.${recentHolderCount > 0 ? ` ${recentHolderCount} of them moved recently, which can matter if distribution starts.` : ''}`,
-      status: top10HolderPct > 60 ? 'warning' : 'pass',
-      badge: top10HolderPct > 60 ? 'WARNING' : 'PASS',
-      confidence: 'live',
+      detail: hasTopHolders
+        ? `Top 10 wallets hold ${top10HolderPct.toFixed(1)}% of supply.${recentHolderCount > 0 ? ` ${recentHolderCount} of them moved recently, which can matter if distribution starts.` : ''}`
+        : 'Top holder concentration is unavailable because the token report did not return holder data.',
+      status: hasTopHolders ? (top10HolderPct > 60 ? 'warning' : 'pass') : 'warning',
+      badge: hasTopHolders ? (top10HolderPct > 60 ? 'WARNING' : 'PASS') : 'INFO',
+      confidence: hasTopHolders ? 'live' : 'unavailable',
     },
     {
       name: 'Deployer History',
@@ -171,46 +190,54 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
   const marketMetrics: LabeledValue[] = [
     {
       label: 'Buy/Sell Ratio 15m',
-      value: `${buyPressureRatio} / ${sellPressureRatio}`,
-      tone: buyPressureRatio >= 60 ? 'pass' : 'warning',
-      sublabel: buyPressureRatio >= 60 ? 'Buy pressure dominant' : 'Sell pressure building',
-      confidence: 'estimated',
+      value: buyPressureRatio === null ? 'N/A' : `${buyPressureRatio} / ${sellPressureRatio}`,
+      tone: buyPressureRatio !== null && buyPressureRatio >= 60 ? 'pass' : 'warning',
+      sublabel: buyPressureRatio === null
+        ? 'Birdeye did not return price history for pressure estimation'
+        : buyPressureRatio >= 60
+        ? 'Buy pressure dominant'
+        : 'Sell pressure building',
+      confidence: buyPressureRatio === null ? 'unavailable' : 'estimated',
     },
     {
       label: 'Vol / Liquidity',
-      value: volumeLiquidityRatio > 0 ? `${volumeLiquidityRatio.toFixed(1)}x` : 'N/A',
+      value: hasMarkets && volumeLiquidityRatio > 0 ? `${volumeLiquidityRatio.toFixed(1)}x` : 'N/A',
       tone: volumeLiquidityRatio > 5 ? 'warning' : 'neutral',
       sublabel:
-        volumeLiquidityRatio > 5
+        !hasMarkets
+          ? 'Market report did not return liquidity data'
+          : volumeLiquidityRatio > 5
           ? 'Fast tape. Manipulation risk rises when volume outruns pool depth.'
           : 'Moderate manipulation risk',
-      confidence: liquidityUsd > 0 ? 'estimated' : 'unavailable',
+      confidence: hasMarkets && liquidityUsd > 0 ? 'estimated' : 'unavailable',
     },
     {
       label: '6h Price Move',
-      value: `${priceMove6h >= 0 ? '+' : ''}${priceMove6h.toFixed(0)}%`,
-      tone: isLate ? 'warning' : 'pass',
-      sublabel: isLate ? 'You may be entering late' : 'Move still looks early enough',
-      confidence: firstCandle ? 'live' : 'unavailable',
+      value: hasPriceHistory ? formatSignedPercent(priceMove6h) : 'N/A',
+      tone: hasPriceHistory && isLate ? 'warning' : hasPriceHistory ? 'pass' : 'neutral',
+      sublabel: hasPriceHistory ? (isLate ? 'You may be entering late' : 'Move still looks early enough') : 'Birdeye did not return 6h price history',
+      confidence: hasPriceHistory ? 'live' : 'unavailable',
     },
     {
       label: 'Smart Money',
-      value: `${smartMoneyCount} wallets`,
+      value: hasTopHolders ? `${smartMoneyCount} wallets` : 'N/A',
       tone: smartMoneyCount > 0 ? 'pass' : 'neutral',
-      sublabel: smartMoneyCount > 0 ? 'Present, some appear to still be in' : 'No strong signal detected',
-      confidence: 'estimated',
+      sublabel: hasTopHolders ? (smartMoneyCount > 0 ? 'Present, some appear to still be in' : 'No strong signal detected') : 'Holder data unavailable',
+      confidence: hasTopHolders ? 'estimated' : 'unavailable',
     },
   ];
 
   const timingPosition: VerdictCheckRow[] = [
     {
       name: 'Entry Timing',
-      detail: isLate
+      detail: !hasPriceHistory
+        ? 'Entry timing could not be evaluated because Birdeye did not return 6h price history.'
+        : isLate
         ? `Token moved ${formatSignedPercent(priceMove6h)} in 6 hours. Price curve suggests a mid-to-late distribution phase, so late buyers may be funding earlier exits.`
         : `Token moved ${formatSignedPercent(priceMove6h)} in 6 hours. The move is not yet at the kind of blow-off range that usually screams late.`,
-      status: isLate ? 'warning' : 'pass',
-      badge: isLate ? 'WARNING' : 'PASS',
-      confidence: firstCandle ? 'live' : 'unavailable',
+      status: hasPriceHistory && isLate ? 'warning' : hasPriceHistory ? 'pass' : 'warning',
+      badge: hasPriceHistory ? (isLate ? 'WARNING' : 'PASS') : 'INFO',
+      confidence: hasPriceHistory ? 'live' : 'unavailable',
     },
   ];
 
@@ -221,7 +248,7 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
       symbol,
       name,
       mint,
-      summary: buildSummary(verdict, lpLocked, top10HolderPct, priceMove6h),
+      summary: buildSummary(verdict, lpLocked, hasTopHolders ? top10HolderPct : null, hasPriceHistory ? priceMove6h : null),
     },
     safetyLayer,
     marketStructure,
@@ -233,19 +260,22 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
 function computeScore(input: {
   mintAuthorityActive: boolean;
   freezeAuthorityActive: boolean;
-  lpLocked: boolean;
-  transferHook: boolean;
-  top10HolderPct: number;
-  priceMove6h: number;
+  lpLocked: boolean | null;
+  transferHook: boolean | null;
+  top10HolderPct: number | null;
+  priceMove6h: number | null;
 }): number {
   let score = 100;
   if (input.mintAuthorityActive) score -= 25;
   if (input.freezeAuthorityActive) score -= 20;
-  if (!input.lpLocked) score -= 20;
+  if (input.lpLocked === false) score -= 20;
+  else if (input.lpLocked === null) score -= 20;
   if (input.transferHook) score -= 15;
-  if (input.top10HolderPct > 70) score -= 12;
-  else if (input.top10HolderPct > 55) score -= 8;
-  if (input.priceMove6h > 180) score -= 8;
+  if (input.top10HolderPct !== null && input.top10HolderPct > 70) score -= 12;
+  else if (input.top10HolderPct !== null && input.top10HolderPct > 55) score -= 8;
+  else if (input.top10HolderPct === null) score -= 8;
+  if (input.priceMove6h !== null && input.priceMove6h > 180) score -= 8;
+  else if (input.priceMove6h === null) score -= 5;
   return Math.max(5, Math.round(score));
 }
 
@@ -258,20 +288,27 @@ function verdictFromScore(score: number): VerdictViewModel['hero']['verdict'] {
 
 function buildSummary(
   verdict: VerdictViewModel['hero']['verdict'],
-  lpLocked: boolean,
-  top10HolderPct: number,
-  priceMove6h: number
+  lpLocked: boolean | null,
+  top10HolderPct: number | null,
+  priceMove6h: number | null
 ): string {
+  const holderText = top10HolderPct !== null
+    ? `Top 10 holders control ${top10HolderPct.toFixed(0)}% of supply`
+    : 'Holder concentration is unavailable';
+  const moveText = priceMove6h !== null
+    ? `a ${formatSignedPercent(priceMove6h)} six-hour move`
+    : 'unavailable six-hour price history';
+
   if (verdict === 'CLEAN') {
     return 'No major structural red flags. Market risk still applies, but the token does not currently look like an obvious trap.';
   }
   if (verdict === 'CAUTION') {
-    return `Some risks present. ${lpLocked ? 'Liquidity is tracked, but concentration is still worth respecting.' : 'LP is not locked.'} Top 10 holders control ${top10HolderPct.toFixed(0)}% of supply, so size down and define the exit before you enter.`;
+    return `Some risks present. ${lpLocked === true ? 'Liquidity is tracked, but concentration is still worth respecting.' : lpLocked === false ? 'LP is not locked.' : 'LP lock status is unavailable.'} ${holderText}, so size down and define the exit before you enter.`;
   }
   if (verdict === 'FLAGGED') {
-    return `Multiple risks are active. ${lpLocked ? 'Liquidity exists, but structure is weak.' : 'Unlocked LP sharply increases rug risk.'} With a ${priceMove6h.toFixed(0)}% six-hour move, this is not a token to chase casually.`;
+    return `Multiple risks are active. ${lpLocked === true ? 'Liquidity exists, but structure is weak.' : lpLocked === false ? 'Unlocked LP sharply increases rug risk.' : 'LP lock status is unavailable.'} With ${moveText}, this is not a token to chase casually.`;
   }
-  return `Critical risk stack detected. ${lpLocked ? 'Structure is already weak.' : 'Unlocked liquidity makes this especially dangerous.'} Treat it like a trap unless you can independently validate the exit path and holder behavior.`;
+  return `Critical risk stack detected. ${lpLocked === true ? 'Structure is already weak.' : lpLocked === false ? 'Unlocked liquidity makes this especially dangerous.' : 'Liquidity status could not be verified.'} Treat it like a trap unless you can independently validate the exit path and holder behavior.`;
 }
 
 function shortAddress(value: string): string {
