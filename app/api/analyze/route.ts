@@ -128,8 +128,10 @@ export async function GET(req: NextRequest) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     console.error('[/api/analyze] CRITICAL ERROR:', msg, e);
     return NextResponse.json(
-      { error: `Analysis failed: ${msg}`, detail: msg },
-      { status: 500 }
+      emptyPayslip(
+        wallet,
+        `Could not complete the wallet analysis right now. ${msg}`
+      )
     );
   }
 }
