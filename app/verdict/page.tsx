@@ -64,7 +64,11 @@ export default function VerdictPage() {
           autoComplete="off"
           disabled={loading}
         />
-        <button className="ds-btn-run ds-btn-verdict" onClick={() => void runScan()} disabled={loading || !mint.trim()}>
+        <button 
+          className="ds-btn-run ds-btn-verdict" 
+          onClick={() => void runScan()} 
+          disabled={loading || !cleanAddress(mint)}
+        >
           {loading ? 'Scanning...' : 'Run Verdict →'}
         </button>
       </div>
@@ -259,10 +263,12 @@ function getScoreColor(score: number): string {
   return 'var(--slip-red)';
 }
 
-function cleanAddress(input: string): string {
+function cleanAddress(input: string | null | undefined): string {
+  if (!input) return '';
   const trimmed = input.trim();
+  // Regex to find a valid Solana address (32-44 base58 chars) within any string
   const match = trimmed.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
-  return match ? match[0] : trimmed;
+  return match ? match[0] : '';
 }
 
 function badgeType(verdict: string): string {
