@@ -4,9 +4,10 @@ import { getTokenReport } from './rugcheck';
 import type { LabeledValue, VerdictCheckRow, VerdictViewModel } from '@/types';
 
 export async function runVerdict(mint: string): Promise<VerdictViewModel> {
-  const connection = new Connection(
-    `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
-  );
+  const rpcUrl = process.env.HELIUS_API_KEY
+    ? `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
+    : 'https://api.mainnet-beta.solana.com';
+  const connection = new Connection(rpcUrl);
   console.log(`[verdict] Scanning ${mint}`);
 
   let mintAuthority: string | null = null;
@@ -205,8 +206,8 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
     {
       name: 'Entry Timing',
       detail: isLate
-        ? `Token is up ${priceMove6h.toFixed(0)}% in 6 hours. Price curve suggests a mid-to-late distribution phase, so late buyers may be funding earlier exits.`
-        : `Token is up ${priceMove6h.toFixed(0)}% in 6 hours. The move is extended, but not yet at the kind of blow-off range that usually screams late.`,
+        ? `Token moved ${formatSignedPercent(priceMove6h)} in 6 hours. Price curve suggests a mid-to-late distribution phase, so late buyers may be funding earlier exits.`
+        : `Token moved ${formatSignedPercent(priceMove6h)} in 6 hours. The move is not yet at the kind of blow-off range that usually screams late.`,
       status: isLate ? 'warning' : 'pass',
       badge: isLate ? 'WARNING' : 'PASS',
       confidence: firstCandle ? 'live' : 'unavailable',
@@ -275,6 +276,10 @@ function buildSummary(
 
 function shortAddress(value: string): string {
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
+}
+
+function formatSignedPercent(value: number): string {
+  return `${value >= 0 ? '+' : ''}${value.toFixed(0)}%`;
 }
 
 
