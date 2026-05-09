@@ -832,8 +832,6 @@ body::before {
   border-color: var(--slip-border2);
   color: var(--slip-text);
 }
-  text-transform: uppercase;
-}
 
 .pill-red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255, 59, 59, 0.3); }
 .pill-orange { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255, 123, 26, 0.3); }
