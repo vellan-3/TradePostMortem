@@ -11,12 +11,13 @@ export default function Nav() {
   const { disconnect, connecting, publicKey } = useWallet();
   const { setVisible } = useWalletModal();
 
-  const [scrolled, setScrolled] = useState(false);
+  const [navChromeOpacity, setNavChromeOpacity] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setNavChromeOpacity(Math.min(window.scrollY / 80, 1));
     };
+    handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -47,18 +48,17 @@ export default function Nav() {
       pointerEvents: 'none'
     }}>
       <div style={{ 
-        width: 'calc(100% - 48px)', 
-        maxWidth: '1264px', 
+        width: 'calc(100% - 40px)', 
         padding: '12px 32px', 
-        background: scrolled ? 'rgba(0, 0, 0, 0.85)' : 'transparent', 
+        background: `rgba(0, 0, 0, ${0.85 * navChromeOpacity})`, 
         borderRadius: '20px', 
-        outline: scrolled ? '1.5px solid rgba(255, 255, 255, 0.15)' : '1.5px solid transparent', 
+        outline: `1.5px solid rgba(255, 255, 255, ${0.15 * navChromeOpacity})`, 
         justifyContent: 'space-between', 
         alignItems: 'center', 
         display: 'flex', 
-        backdropFilter: scrolled ? 'blur(16px)' : 'none', 
-        WebkitBackdropFilter: scrolled ? 'blur(16px)' : 'none',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        backdropFilter: `blur(${16 * navChromeOpacity}px)`, 
+        WebkitBackdropFilter: `blur(${16 * navChromeOpacity}px)`,
+        transition: 'background 0.2s ease, outline-color 0.2s ease, backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease',
         pointerEvents: 'all'
       }}>
         

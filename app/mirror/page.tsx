@@ -15,7 +15,7 @@ export default function MirrorPage() {
   const bootstrapped = useRef(false);
 
   const fetchMirror = useCallback(async (nextMint = mint, nextSol = sol, nextWallet = wallet, nextEntryTs = entryTs) => {
-    const addr = nextMint.trim();
+    const addr = cleanAddress(nextMint);
     if (!addr) return;
     setLoading(true);
     setError(null);
@@ -215,6 +215,12 @@ export default function MirrorPage() {
 
     </div>
   );
+}
+
+function cleanAddress(input: string): string {
+  const trimmed = input.trim();
+  const match = trimmed.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
+  return match ? match[0] : trimmed;
 }
 
 /* SLIP v2 Official Release */

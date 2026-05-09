@@ -1,8 +1,8 @@
 import { ParsedSwap } from '@/types';
 import { getHistoricalPrice } from './birdeye';
 
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY!;
-const BIRDEYE_KEY = process.env.BIRDEYE_API_KEY!;
+const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
+const BIRDEYE_KEY = process.env.BIRDEYE_API_KEY || '';
 const HELIUS_BASE = 'https://api-mainnet.helius-rpc.com/v0';
 const BIRDEYE_BASE = 'https://public-api.birdeye.so';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';

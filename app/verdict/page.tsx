@@ -11,7 +11,7 @@ export default function VerdictPage() {
   const bootstrapped = useRef(false);
 
   const runScan = useCallback(async (nextMint = mint) => {
-    const addr = nextMint.trim();
+    const addr = cleanAddress(nextMint);
     if (!addr) return;
     setLoading(true);
     setError(null);
@@ -248,6 +248,12 @@ function getScoreColor(score: number): string {
   if (score >= 60) return 'var(--slip-warning)';
   if (score >= 40) return '#f97316';
   return 'var(--slip-red)';
+}
+
+function cleanAddress(input: string): string {
+  const trimmed = input.trim();
+  const match = trimmed.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
+  return match ? match[0] : trimmed;
 }
 
 function badgeType(verdict: string): string {

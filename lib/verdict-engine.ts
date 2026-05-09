@@ -3,11 +3,12 @@ import { getOHLCV } from './birdeye';
 import { getTokenReport } from './rugcheck';
 import type { LabeledValue, VerdictCheckRow, VerdictViewModel } from '@/types';
 
-const connection = new Connection(
-  `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
-);
-
 export async function runVerdict(mint: string): Promise<VerdictViewModel> {
+  const connection = new Connection(
+    `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
+  );
+  console.log(`[verdict] Scanning ${mint}`);
+
   let mintAuthority: string | null = null;
   let freezeAuthority: string | null = null;
   let symbol = 'UNKNOWN';

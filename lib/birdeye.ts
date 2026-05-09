@@ -1,4 +1,4 @@
-const BIRDEYE_KEY = process.env.BIRDEYE_API_KEY!;
+const BIRDEYE_KEY = process.env.BIRDEYE_API_KEY || '';
 const BASE = 'https://public-api.birdeye.so';
 
 const HEADERS = {

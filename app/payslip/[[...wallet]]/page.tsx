@@ -26,7 +26,7 @@ export default function PayslipPage({ params }: { params: { wallet?: string[] } 
   const bootstrapped = useRef(false);
 
   const generate = useCallback(async (nextWallet = wallet) => {
-    const addr = nextWallet.trim();
+    const addr = cleanAddress(nextWallet);
     if (!addr) return;
     playSubmit();
     setLoading(true);
@@ -164,3 +164,11 @@ export default function PayslipPage({ params }: { params: { wallet?: string[] } 
     </div>
   );
 }
+
+function cleanAddress(input: string): string {
+  const trimmed = input.trim();
+  const match = trimmed.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
+  return match ? match[0] : trimmed;
+}
+
+/* SLIP v2 Official Release */

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const result = await runVerdict(mint);
     return NextResponse.json(result);
   } catch (err) {
-    console.error('[verdict]', err);
+    console.error('[verdict] Scan failed for:', mint, err);
     return NextResponse.json(
       { error: 'verdict scan failed', detail: String(err) },
       { status: 500 }
