@@ -19,7 +19,7 @@ export default function VerdictPage() {
     try {
       const res = await fetch(`/api/verdict?mint=${encodeURIComponent(addr)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Scan failed');
+      if (!res.ok) throw new Error(data.detail || data.error || 'Scan failed');
       setResult(data as VerdictViewModel);
       window.history.replaceState(null, '', `/verdict?mint=${addr}`);
     } catch (e: unknown) {
@@ -69,7 +69,16 @@ export default function VerdictPage() {
         </button>
       </div>
 
-      {error && <div style={{ color: 'var(--slip-red)', fontSize: '14px', fontFamily: 'Space Mono, monospace' }}>✕ {error}</div>}
+      {error && (
+        <div style={{ color: 'var(--slip-red)', fontSize: '14px', fontFamily: 'Space Mono, monospace', marginTop: '12px' }}>
+          <div>✕ {error}</div>
+          {error.includes('failed') && (
+            <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px' }}>
+              Check your API keys and try again. If this persists, the token might be too new for the scanner.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Idle state ── */}
       {!result && !loading && (

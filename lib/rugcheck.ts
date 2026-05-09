@@ -45,9 +45,15 @@ export async function getTokenReport(mint: string) {
         : undefined,
       cache: 'no-store',
     });
-    if (!res.ok) return null;
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`RugCheck API Error ${res.status}: ${text}`);
+    }
     return await res.json();
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('RugCheck API Error')) throw err;
+    console.error('[RugCheck] Fetch failed:', err);
     return null;
   }
 }
