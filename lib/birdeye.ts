@@ -7,6 +7,28 @@ const HEADERS = {
   'X-API-KEY': BIRDEYE_KEY,
 };
 
+// Request-level cache to prevent redundant fetches during a single analysis run
+const requestCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5000; // 5 seconds
+
+async function cachedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  if (options.method && options.method !== 'GET') return fetch(url, options);
+  
+  const now = Date.now();
+  const cached = requestCache.get(url);
+  if (cached && (now - cached.timestamp < CACHE_TTL)) {
+    return new Response(JSON.stringify(cached.data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const res = await fetch(url, { ...options, cache: 'no-store' });
+  if (res.ok) {
+    const data = await res.json();
+    requestCache.set(url, { data, timestamp: now });
+    return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  return res;
+}
+
 export interface OHLCVBar {
   o: number;
   h: number;
@@ -35,14 +57,13 @@ export async function getBatchTokenMeta(
   const unique = [...new Set(mints)].slice(0, 50);
 
   try {
-    const res = await fetch(`${BASE}/defi/v3/token/meta-data/multiple`, {
+    const res = await cachedFetch(`${BASE}/defi/v3/token/meta-data/multiple`, {
       method: 'POST',
       headers: {
         ...HEADERS,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ list_address: unique.join(',') }),
-      cache: 'no-store',
     });
 
     if (!res.ok) return {};
@@ -93,9 +114,9 @@ export async function getPriceAtTimestamp(
   timestamp: number
 ): Promise<number | null> {
   try {
-    const res = await fetch(
+    const res = await cachedFetch(
       `${BASE}/defi/historical_price_unix?address=${mint}&unixtime=${timestamp}`,
-      { headers: HEADERS, cache: 'no-store' }
+      { headers: HEADERS }
     );
     if (res.ok) {
       const data = await res.json();
@@ -129,9 +150,8 @@ export async function getHistoricalPrice(
 
 export async function getCurrentPrice(mint: string): Promise<number | null> {
   try {
-    const res = await fetch(`${BASE}/defi/price?address=${mint}`, {
+    const res = await cachedFetch(`${BASE}/defi/price?address=${mint}`, {
       headers: HEADERS,
-      cache: 'no-store',
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -148,9 +168,9 @@ export async function getOHLCV(
   interval = '15m'
 ): Promise<OHLCVBar[]> {
   try {
-    const res = await fetch(
+    const res = await cachedFetch(
       `${BASE}/defi/v3/ohlcv?address=${mint}&type=${interval}&time_from=${timeFrom}&time_to=${timeTo}`,
-      { headers: HEADERS, cache: 'no-store' }
+      { headers: HEADERS }
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -239,9 +259,8 @@ export async function getPeakPriceAfterEntry(
 
 async function getRecentTokenTrades(mint: string, limit: number): Promise<BirdeyeTrade[]> {
   try {
-    const res = await fetch(`${BASE}/defi/txs/token?address=${mint}&limit=${limit}&tx_type=swap`, {
+    const res = await cachedFetch(`${BASE}/defi/txs/token?address=${mint}&limit=${limit}&tx_type=swap`, {
       headers: HEADERS,
-      cache: 'no-store',
     });
     if (!res.ok) return [];
     const data = await res.json();

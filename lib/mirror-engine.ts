@@ -12,6 +12,25 @@ const HEADERS = {
   'X-API-KEY': BIRDEYE_KEY,
 };
 
+const requestCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5000;
+
+async function cachedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  if (options.method && options.method !== 'GET') return fetch(url, options);
+  const now = Date.now();
+  const cached = requestCache.get(url);
+  if (cached && (now - cached.timestamp < CACHE_TTL)) {
+    return new Response(JSON.stringify(cached.data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  const res = await fetch(url, { ...options, cache: 'no-store' });
+  if (res.ok) {
+    const data = await res.json();
+    requestCache.set(url, { data, timestamp: now });
+    return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  return res;
+}
+
 export async function getMirrorData(
   mint: string,
   userEntryTimestamp?: number,
@@ -28,9 +47,9 @@ export async function getMirrorData(
   let symbol = 'UNKNOWN';
 
   try {
-    const res = await fetch(
+    const res = await cachedFetch(
       `${BASE}/defi/v2/tokens/top_traders?address=${mint}&time_frame=24h&sort_by=realized_pnl&sort_type=desc&limit=10`,
-      { headers: HEADERS, cache: 'no-store' }
+      { headers: HEADERS }
     );
 
     if (res.ok) {
