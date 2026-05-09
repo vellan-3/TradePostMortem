@@ -3,11 +3,7 @@ import { getCurrentPrice, getPriceAtTimestamp } from './birdeye';
 import { getWalletSwaps } from './helius';
 import type { DataConfidence, MirrorComparison, MirrorLeaderboardRow, MirrorPatternInsights, MirrorViewModel } from '@/types';
 
-const connection = new Connection(
-  `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
-);
-
-const BIRDEYE_KEY = process.env.BIRDEYE_API_KEY!;
+const BIRDEYE_KEY = process.env.BIRDEYE_API_KEY || '';
 const BASE = 'https://public-api.birdeye.so';
 
 const HEADERS = {
@@ -333,6 +329,9 @@ export async function getWinnerDataWithFallback(
   // Fallback: Helius largest token accounts (current holders, not trade history)
   try {
     const mintPubkey = new PublicKey(mint);
+    const connection = new Connection(
+      `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
+    );
     const largest = await connection.getTokenLargestAccounts(mintPubkey);
 
     const topHolders: TopHolder[] = largest.value.slice(0, 5).map((acc, i) => ({

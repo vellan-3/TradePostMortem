@@ -122,8 +122,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(payload);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
-    console.error('[/api/analyze] Error:', msg);
-    return NextResponse.json({ error: 'Analysis failed', detail: msg }, { status: 500 });
+    console.error('[/api/analyze] CRITICAL ERROR:', msg, e);
+    return NextResponse.json(
+      { error: 'Analysis failed', detail: msg, stack: e instanceof Error ? e.stack : undefined },
+      { status: 500 }
+    );
   }
 }
 
