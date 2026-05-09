@@ -17,15 +17,17 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
 
   try {
     const mintInfo = await connection.getParsedAccountInfo(new PublicKey(mint));
-    if (!mintInfo.value) {
-      throw new Error('Token mint account was not found on Solana mainnet.');
+    if (mintInfo.value) {
+      const mintData = (mintInfo.value?.data as any)?.parsed?.info;
+      mintAuthority = mintData?.mintAuthority ?? null;
+      freezeAuthority = mintData?.freezeAuthority ?? null;
+      // If we got real data, we might be able to find symbol/name if rugcheck fails later
+      symbol = (mintData as any)?.symbol ?? symbol;
+    } else {
+      console.warn('[verdict] Token mint account not found in first RPC lookup, proceeding...');
     }
-    const mintData = (mintInfo.value?.data as any)?.parsed?.info;
-    mintAuthority = mintData?.mintAuthority ?? null;
-    freezeAuthority = mintData?.freezeAuthority ?? null;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Solana RPC mint lookup failed: ${message}`);
+    console.warn('[verdict] Solana RPC lookup failed, proceeding with partial data:', error);
   }
 
   let rugReport = null;
