@@ -146,6 +146,7 @@ export async function getMirrorData(
     mint,
     symbol,
     totalTraders: leaderboard.length,
+    dataSource: leaderboard.length > 0 ? 'traders' : 'unavailable',
     leaderboard,
     yourRow,
     comparison,
@@ -361,9 +362,11 @@ export async function getWinnerDataWithFallback(
         confidence: { entryMarketCap: 'unavailable', dex: 'unavailable', hold: 'unavailable', entryTiming: 'unavailable' },
       };
     });
+    mirrorData.dataSource = topHolders.length > 0 ? 'holders' : 'unavailable';
 
     return { mirrorData, topHolders, dataSource: 'holders' };
   } catch {
+    mirrorData.dataSource = 'unavailable';
     return { mirrorData, topHolders: [], dataSource: 'unavailable' };
   }
 }

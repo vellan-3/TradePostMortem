@@ -195,8 +195,14 @@ export function computePatternTax(analyses: TradeAnalysis[]): PatternTax {
   const timesRepeated = mostCommonEntry?.[1] ?? 0;
 
   const totalCostSOL = analyses
-    .filter(analysis => analysis.diagnosis === mostCommonMistake && (analysis.realizedPnlSOL ?? 0) < 0)
-    .reduce((sum, analysis) => sum + Math.abs(analysis.realizedPnlSOL ?? 0), 0);
+    .filter(analysis => {
+      const pnl = analysis.realizedPnlSOL ?? analysis.unrealizedPnlSOL ?? 0;
+      return analysis.diagnosis === mostCommonMistake && pnl < 0;
+    })
+    .reduce((sum, analysis) => {
+      const pnl = analysis.realizedPnlSOL ?? analysis.unrealizedPnlSOL ?? 0;
+      return sum + Math.abs(pnl);
+    }, 0);
 
   const validWinnerComparisons = analyses.filter(
     analysis =>

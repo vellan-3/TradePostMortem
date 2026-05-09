@@ -98,6 +98,7 @@ export interface MirrorViewModel {
   mint: string;
   symbol: string;
   totalTraders: number;
+  dataSource: 'traders' | 'holders' | 'unavailable';
   leaderboard: MirrorLeaderboardRow[];
   yourRow: MirrorLeaderboardRow | null;
   comparison: MirrorComparison | null;

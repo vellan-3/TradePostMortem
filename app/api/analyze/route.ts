@@ -4,6 +4,8 @@ import { analyzeTrade, computeGrade, computePatternTax } from '@/lib/analyzer';
 import { getWinnerDataWithFallback } from '@/lib/mirror-engine';
 import { getBatchTokenMeta, getTokenMetaFromRecentTrades } from '@/lib/birdeye';
 import { getPumpFunMeta } from '@/lib/pumpfun';
+import { cleanSolanaAddress } from '@/lib/address';
+import { PublicKey } from '@solana/web3.js';
 import type {
   DiagnosisCode,
   LabeledValue,
@@ -38,12 +40,14 @@ interface TradeCandidate {
 }
 
 export async function GET(req: NextRequest) {
-  const wallet = req.nextUrl.searchParams.get('wallet');
+  const wallet = cleanSolanaAddress(req.nextUrl.searchParams.get('wallet'));
   if (!wallet) {
     return NextResponse.json({ error: 'wallet parameter required' }, { status: 400 });
   }
 
-  if (wallet.length < 32 || wallet.length > 44) {
+  try {
+    new PublicKey(wallet);
+  } catch {
     return NextResponse.json({ error: 'Invalid Solana wallet address' }, { status: 400 });
   }
 
@@ -131,11 +135,14 @@ export async function GET(req: NextRequest) {
 }
 
 async function buildMirrorMap(analyses: TradeAnalysis[], wallet: string) {
-  const uniqueMints = [...new Set(analyses.map(analysis => analysis.tokenMint))];
+  const uniqueMints = [...new Set(analyses.map(analysis => analysis.tokenMint))].slice(0, 4);
   const entries = await Promise.all(
     uniqueMints.map(async mint => {
       try {
-        const fallbackRes = await getWinnerDataWithFallback(mint, undefined, undefined, wallet);
+        const fallbackRes = await withTimeout(
+          getWinnerDataWithFallback(mint, undefined, undefined, wallet),
+          7000
+        );
         return [mint, fallbackRes.mirrorData] as const;
       } catch {
         return [mint, null] as const;
@@ -143,6 +150,22 @@ async function buildMirrorMap(analyses: TradeAnalysis[], wallet: string) {
     })
   );
   return new Map(entries);
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms);
+    promise.then(
+      value => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      error => {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    );
+  });
 }
 
 function enrichAnalysis(analysis: TradeAnalysis, mirror: Awaited<ReturnType<typeof getWinnerDataWithFallback>>['mirrorData'] | null): TradeAnalysis {

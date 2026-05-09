@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { MirrorLeaderboardRow, MirrorViewModel } from '@/types';
+import { cleanSolanaAddress } from '@/lib/address';
 
 export default function MirrorPage() {
   const [mint, setMint] = useState('');
@@ -15,7 +16,7 @@ export default function MirrorPage() {
   const bootstrapped = useRef(false);
 
   const fetchMirror = useCallback(async (nextMint = mint, nextSol = sol, nextWallet = wallet, nextEntryTs = entryTs) => {
-    const addr = cleanAddress(nextMint);
+    const addr = cleanSolanaAddress(nextMint);
     if (!addr) return;
     setLoading(true);
     setError(null);
@@ -114,7 +115,7 @@ export default function MirrorPage() {
           {/* Left: leaderboard */}
           <div>
             <div className="ds-section-lbl">
-              {result.symbol} · {result.leaderboard.length} traders · ranked by realized P&L
+              {result.symbol} · {result.leaderboard.length} {result.dataSource === 'holders' ? 'holders' : 'traders'} · {result.dataSource === 'holders' ? 'fallback holder data' : 'ranked by realized P&L'}
             </div>
             <div className="ds-lb-head">
               <div className="ds-lb-head-lbl">#</div>
@@ -143,7 +144,7 @@ export default function MirrorPage() {
                 <div className={`ds-lb-pnl ${winner.totalPnlSol >= 0 ? 'ds-lb-pnl-pos' : 'ds-lb-pnl-neg'}`}>
                   {winner.totalPnlSol >= 0 ? '+' : ''}{winner.totalPnlSol.toFixed(1)}
                 </div>
-                <div className="ds-lb-entry">{winner.entrySol ?? winner.entryLine.split('at')[0]} SOL</div>
+                <div className="ds-lb-entry">{winner.entrySol !== null ? `${winner.entrySol} SOL` : '—'}</div>
                 <div className="ds-lb-hold">{winner.holdDisplay}</div>
               </div>
             ))}
@@ -215,12 +216,6 @@ export default function MirrorPage() {
 
     </div>
   );
-}
-
-function cleanAddress(input: string): string {
-  const trimmed = input.trim();
-  const match = trimmed.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
-  return match ? match[0] : trimmed;
 }
 
 /* SLIP v2 Official Release */

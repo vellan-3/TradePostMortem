@@ -9,6 +9,7 @@ import VerdictPanel from '@/components/VerdictPanel';
 import MirrorPanel from '@/components/MirrorPanel';
 import { playSubmit } from '@/lib/sound';
 import ResultsView from '@/components/ResultsView';
+import { cleanSolanaAddress } from '@/lib/address';
 
 export default function PayslipPage({ params }: { params: { wallet?: string[] } }) {
   const initialWallet = params.wallet?.[0] || '';
@@ -26,7 +27,7 @@ export default function PayslipPage({ params }: { params: { wallet?: string[] } 
   const bootstrapped = useRef(false);
 
   const generate = useCallback(async (nextWallet = wallet) => {
-    const addr = cleanAddress(nextWallet);
+    const addr = cleanSolanaAddress(nextWallet);
     if (!addr) return;
     playSubmit();
     setLoading(true);
@@ -163,12 +164,6 @@ export default function PayslipPage({ params }: { params: { wallet?: string[] } 
       />
     </div>
   );
-}
-
-function cleanAddress(input: string): string {
-  const trimmed = input.trim();
-  const match = trimmed.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
-  return match ? match[0] : trimmed;
 }
 
 /* SLIP v2 Official Release */

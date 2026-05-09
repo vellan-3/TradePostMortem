@@ -50,14 +50,16 @@ export default function MirrorPanel({ mint, symbol, onClose }: Props) {
         {data && !data.error && data.leaderboard && !loading && (
           <>
             <div className="mirror-panel-token" id="mirror-token-label">
-              Showing all wallets that won on <b>${symbol}</b> — ranked by SOL gained
+              {data.dataSource === 'holders'
+                ? <>No live winner leaderboard was available for <b>${symbol}</b>, so showing current top holders.</>
+                : <>Showing all wallets that won on <b>${symbol}</b> — ranked by SOL gained</>}
             </div>
 
             <div className="lb-table">
               <div className="lb-head">
                 <span>#</span>
                 <span>Wallet</span>
-                <span>P&L</span>
+                <span>{data.dataSource === 'holders' ? 'Tokens' : 'P&L'}</span>
                 <span>Hold</span>
               </div>
 
@@ -74,12 +76,13 @@ export default function MirrorPanel({ mint, symbol, onClose }: Props) {
                       )}
                     </div>
                     <div className="lb-wallet-sub">
-                      {winner.entryMarketCap ? `$${(winner.entryMarketCap / 1000).toFixed(0)}k mcap` : '—'} ·{' '}
-                      {i === 0 ? '2h 32m before you' : i === 1 ? '3h 20m before you' : i === 2 ? '3h 10m before you' : '2h 30m before you'} · {winner.dex ?? 'Raydium'}
+                      {winner.entrySub ?? winner.entryLine ?? '—'}
                     </div>
                   </div>
                   <div className={`lb-pnl-val ${winner.totalPnlSol < 0 ? 'neg' : ''}`}>
-                    {winner.totalPnlSol > 0 ? '+' : ''}{winner.totalPnlSol.toFixed(1)}
+                    {data.dataSource === 'holders'
+                      ? winner.entryLine.replace(/^Holding\s+/, '').replace(/\s+tokens$/, '')
+                      : `${winner.totalPnlSol > 0 ? '+' : ''}${winner.totalPnlSol.toFixed(1)}`}
                   </div>
                   <div className="lb-hold-time">
                     {winner.holdDisplay}
