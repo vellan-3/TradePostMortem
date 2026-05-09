@@ -24,6 +24,9 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
   }
 
   const rugReport = await getTokenReport(mint);
+  if (!rugReport) {
+    throw new Error('RugCheck report unavailable for this token. This usually means the token is too new or the RugCheck API is unreachable.');
+  }
   const tokenMeta = rugReport?.tokenMeta ?? rugReport?.token_extensions?.tokenMetadata ?? null;
   symbol = tokenMeta?.symbol ?? symbol;
   name = tokenMeta?.name ?? name;
@@ -63,10 +66,16 @@ export async function runVerdict(mint: string): Promise<VerdictViewModel> {
     firstCandle && latestCandle && firstCandle.o > 0
       ? ((latestCandle.c - firstCandle.o) / firstCandle.o) * 100
       : 0;
-  const buyVolume = ohlcv.reduce((sum, candle) => sum + Number(candle.v ?? 0), 0);
-  const buyPressureRatio = priceMove6h >= 0 ? 68 : 42;
-  const sellPressureRatio = 100 - buyPressureRatio;
+
   const volumeLiquidityRatio = liquidityUsd > 0 ? volume24hUsd / liquidityUsd : 0;
+  
+  // Estimate pressure from price move and volume ratio
+  let buyPressureRatio = 50;
+  if (priceMove6h > 20) buyPressureRatio = 65;
+  else if (priceMove6h > 100) buyPressureRatio = 80;
+  else if (priceMove6h < -20) buyPressureRatio = 35;
+  
+  const sellPressureRatio = 100 - buyPressureRatio;
   const smartMoneyCount = topHolders.slice(0, 10).filter((holder: any) => Number(holder?.pct ?? 0) < 5).length;
   const isLate = priceMove6h > 180;
   const verdictScore = computeScore({

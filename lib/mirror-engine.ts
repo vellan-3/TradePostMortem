@@ -216,14 +216,19 @@ function toLeaderboardRow(trader: any, index: number, solPrice: number): MirrorL
 
 function buildPatternInsights(rows: MirrorLeaderboardRow[]): MirrorPatternInsights {
   const top = rows.slice(0, 10);
-  const avgMcap =
-    top.length > 0
-      ? top.reduce((sum, row) => sum + (row.entryMarketCap ?? 0), 0) / top.length
-      : 0;
-  const avgSize =
-    top.length > 0
-      ? top.reduce((sum, row) => sum + (row.sizeSol ?? 0), 0) / top.length
-      : 0;
+  if (top.length === 0) {
+    return {
+      avgEntryMarketCap: 'Unavailable',
+      avgHoldBeforePartialExit: 'Unavailable',
+      mostUsedDex: 'Unavailable',
+      partialProfitFrequency: 'Unavailable',
+      avgEntryBeforePeak: 'Unavailable',
+      avgSizeDeployed: '0 SOL',
+    };
+  }
+
+  const avgMcap = top.reduce((sum, row) => sum + (row.entryMarketCap ?? 0), 0) / top.length;
+  const avgSize = top.reduce((sum, row) => sum + (row.sizeSol ?? 0), 0) / top.length;
   const dexCounts = new Map<string, number>();
   let partialCount = 0;
 
@@ -233,12 +238,13 @@ function buildPatternInsights(rows: MirrorLeaderboardRow[]): MirrorPatternInsigh
   }
 
   const mostUsedDex = [...dexCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  
   return {
     avgEntryMarketCap: avgMcap > 0 ? `$${formatCompactUsd(avgMcap)}` : 'Unavailable',
-    avgHoldBeforePartialExit: '28 min',
+    avgHoldBeforePartialExit: top[0].holdDisplay === 'Still in' ? 'Not yet exited' : top[0].holdDisplay,
     mostUsedDex: mostUsedDex ? `${mostUsedDex[0]} (${mostUsedDex[1]}/${top.length})` : 'Unavailable',
-    partialProfitFrequency: '8 out of 10',
-    avgEntryBeforePeak: '2h 14m earlier',
+    partialProfitFrequency: `${partialCount} out of ${top.length}`,
+    avgEntryBeforePeak: 'Estimated from flow',
     avgSizeDeployed: `${round1(avgSize)} SOL`,
   };
 }
