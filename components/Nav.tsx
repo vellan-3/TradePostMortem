@@ -38,31 +38,28 @@ export default function Nav() {
     <nav style={{ 
       width: '100%', 
       position: 'fixed', 
-      top: scrolled ? '0' : '10px', 
+      top: '10px', 
       left: 0, 
       right: 0, 
       zIndex: 1000, 
       display: 'flex', 
       justifyContent: 'center',
-      transition: 'top 0.3s ease'
+      pointerEvents: 'none'
     }}>
       <div style={{ 
-        width: '100%', 
-        maxWidth: scrolled ? '100%' : '1928px', 
-        padding: scrolled ? '12px 32px' : '6px 15px', 
-        background: scrolled ? 'rgba(0, 0, 0, 0.8)' : 'linear-gradient(180deg, rgba(153, 153, 153, 0.13) 50%, rgba(255, 255, 255, 0.05) 100%)', 
-        overflow: 'visible', 
-        borderRadius: scrolled ? '0' : '10px', 
-        outline: scrolled ? 'none' : '1.50px solid rgba(255, 255, 255, 0.10)', 
-        outlineOffset: '-1.50px', 
+        width: 'calc(100% - 48px)', 
+        maxWidth: '1264px', 
+        padding: '12px 32px', 
+        background: scrolled ? 'rgba(0, 0, 0, 0.85)' : 'transparent', 
+        borderRadius: '20px', 
+        outline: scrolled ? '1.5px solid rgba(255, 255, 255, 0.15)' : '1.5px solid transparent', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
         display: 'flex', 
-        margin: scrolled ? '0' : '0 20px', 
-        backdropFilter: 'blur(12px)', 
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.1)' : 'none',
-        transition: 'all 0.3s ease'
+        backdropFilter: scrolled ? 'blur(16px)' : 'none', 
+        WebkitBackdropFilter: scrolled ? 'blur(16px)' : 'none',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        pointerEvents: 'all'
       }}>
         
         <Link href="/" style={{ textDecoration: 'none', textAlign: 'center' }}>
