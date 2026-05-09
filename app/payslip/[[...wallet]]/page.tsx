@@ -37,7 +37,7 @@ export default function PayslipPage({ params }: { params: { wallet?: string[] } 
     try {
       const res = await fetch(`/api/analyze?wallet=${encodeURIComponent(addr)}`);
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Analysis failed');
+      if (!res.ok) throw new Error(json.detail ?? json.error ?? 'Analysis failed');
       if (json.message) setMessage(json.message);
       setData(json as PayslipViewModel);
       setOpenCard(json.trades?.[0]?.id ?? null);

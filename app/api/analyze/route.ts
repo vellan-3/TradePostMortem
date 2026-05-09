@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const swaps = await getWalletSwaps(wallet);
+    const swaps = await fetchWalletSwapsForPayslip(wallet);
     if (swaps.length === 0) {
       return NextResponse.json(emptyPayslip(wallet, 'No swap transactions found for this wallet.'));
     }
@@ -128,9 +128,31 @@ export async function GET(req: NextRequest) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     console.error('[/api/analyze] CRITICAL ERROR:', msg, e);
     return NextResponse.json(
-      { error: 'Analysis failed', detail: msg, stack: e instanceof Error ? e.stack : undefined },
+      { error: `Analysis failed: ${msg}`, detail: msg },
       { status: 500 }
     );
+  }
+}
+
+async function fetchWalletSwapsForPayslip(wallet: string): Promise<ParsedSwap[]> {
+  if (!process.env.HELIUS_API_KEY) {
+    throw new Error('HELIUS_API_KEY is not configured on this deployment.');
+  }
+
+  try {
+    return await getWalletSwaps(wallet);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('Helius API error 401') || message.includes('Helius API error 403')) {
+      throw new Error('Helius rejected the API key configured on this deployment.');
+    }
+    if (message.includes('Helius API error 429')) {
+      throw new Error('Helius rate limit reached. Wait a minute and try again.');
+    }
+    if (message.includes('Helius API error')) {
+      throw new Error(message);
+    }
+    throw error;
   }
 }
 
