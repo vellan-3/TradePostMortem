@@ -20,13 +20,19 @@ async function cachedFetch(url: string, options: RequestInit = {}): Promise<Resp
   const now = Date.now();
   const cached = requestCache.get(url);
   if (cached && (now - cached.timestamp < CACHE_TTL)) {
-    return new Response(JSON.stringify(cached.data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(cached.data), { 
+      status: 200, 
+      headers: { 'Content-Type': 'application/json' } 
+    });
   }
   const res = await fetch(url, { ...options, cache: 'no-store' });
   if (res.ok) {
     const data = await res.json();
     requestCache.set(url, { data, timestamp: now });
-    return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify(data), { 
+      status: 200, 
+      headers: { 'Content-Type': 'application/json' } 
+    });
   }
   return res;
 }
