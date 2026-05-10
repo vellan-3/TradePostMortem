@@ -48,11 +48,20 @@ export const metadata: Metadata = {
     title: 'SLIP — Onchain Trade Intelligence',
     description: "Don't get in wrong. Know who's winning while you're in. Know what it cost you after.",
     type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 1200,
+        alt: 'SLIP — Onchain Trade Intelligence',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SLIP — Onchain Trade Intelligence',
     description: 'Verdict · Mirror · Payslip. Full onchain trade intelligence for Solana.',
+    images: ['/og-image.png'],
   },
 };
 
