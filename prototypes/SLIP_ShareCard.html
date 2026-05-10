@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SLIP — Share Payslip Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#111;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  font-family:'Instrument Sans',sans-serif;
+  padding:40px 24px;
+}
+
+/* ════════════════════════════════════════
+   MODAL OVERLAY
+════════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.82);
+  backdrop-filter:blur(8px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:500;
+  padding:24px;
+}
+
+.modal-box{
+  width:100%;
+  max-width:560px;
+  background:#0e0e14;
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:20px;
+  overflow:hidden;
+  position:relative;
+  animation:modal-in .22s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+@keyframes modal-in{
+  from{opacity:0;transform:scale(0.95) translateY(12px)}
+  to  {opacity:1;transform:scale(1)    translateY(0)}
+}
+
+/* ── MODAL HEADER ── */
+.modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:20px 24px 0;
+}
+
+.modal-eyebrow{
+  font-family:'Space Mono',monospace;
+  font-size:10px;font-weight:700;
+  letter-spacing:0.18em;text-transform:uppercase;
+  color:rgba(255,255,255,0.4);
+}
+
+.modal-close{
+  width:30px;height:30px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.10);
+  color:rgba(255,255,255,0.5);
+  font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;
+}
+.modal-close:hover{background:rgba(255,255,255,0.12);color:#fff}
+
+/* ── CARD WRAPPER ── */
+.card-wrap{padding:16px 24px}
+
+/* ════════════════════════════════════════
+   THE SHARE CARD
+   This exact div gets exported as JPEG
+════════════════════════════════════════ */
+.share-card{
+  width:100%;
+  aspect-ratio:1.91/1; /* 1200×628 — standard OG ratio */
+  background:#06060a;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.08);
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:28px 32px 24px;
+}
+
+/* Ambient glow — changes per diagnosis */
+.share-card::before{
+  content:'';
+  position:absolute;
+  top:-60px;left:-40px;
+  width:300px;height:300px;
+  border-radius:50%;
+  background:radial-gradient(circle, var(--glow-color, rgba(255,50,50,0.18)) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+/* Grid pattern overlay */
+.share-card::after{
+  content:'';
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size:32px 32px;
+  pointer-events:none;
+}
+
+/* ── CARD TOP ── */
+.card-top{
+  position:relative;z-index:1;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.card-top-left{}
+
+.card-slip-label{
+  font-family:'Space Mono',monospace;
+  font-size:9px;font-weight:700;
+  letter-spacing:0.22em;text-transform:uppercase;
+  color:rgba(255,255,255,0.35);
+  margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+
+.card-slip-dot{
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--accent-color, #ff3232);
+}
+
+.card-diagnosis{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(18px,3.2vw,26px);
+  font-weight:800;
+  letter-spacing:-0.03em;
+  line-height:1;
+  color:var(--accent-color, #ff3232);
+  margin-bottom:8px;
+}
+
+.card-token-row{
+  display:flex;align-items:center;gap:10px;
+}
+
+.card-symbol{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(13px,2vw,16px);
+  font-weight:700;
+  color:#fff;
+  letter-spacing:-0.02em;
+}
+
+.card-date{
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  color:rgba(255,255,255,0.35);
+}
+
+/* ── PNL BLOCK (top right) ── */
+.card-pnl-block{
+  text-align:right;
+  flex-shrink:0;
+}
+
+.card-pnl-label{
+  font-family:'Space Mono',monospace;
+  font-size:9px;font-weight:700;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:rgba(255,255,255,0.35);
+  margin-bottom:6px;
+}
+
+.card-pnl-value{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(24px,4vw,36px);
+  font-weight:800;
+  letter-spacing:-0.04em;
+  line-height:1;
+}
+
+.card-pnl-sol{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  color:rgba(255,255,255,0.45);
+  margin-top:3px;
+}
+
+/* ── CARD MIDDLE — STATS GRID ── */
+.card-stats{
+  position:relative;z-index:1;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;
+  background:rgba(255,255,255,0.06);
+  border-radius:8px;
+  overflow:hidden;
+  margin:0 0 4px;
+}
+
+.card-stat{
+  background:#06060a;
+  padding:10px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.card-stat-lbl{
+  font-family:'Space Mono',monospace;
+  font-size:8px;font-weight:700;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:rgba(255,255,255,0.32);
+}
+
+.card-stat-val{
+  font-family:'Syne',sans-serif;
+  font-size:13px;font-weight:700;
+  letter-spacing:-0.02em;
+  color:#fff;
+}
+
+.card-stat-val.red   {color:#ff3232}
+.card-stat-val.green {color:#10b981}
+.card-stat-val.amber {color:#f59e0b}
+
+/* ── WINNER COMPARISON BAR ── */
+.card-winner-bar{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:8px;
+  padding:10px 14px;
+  display:flex;
+  align-items:center;
+  gap:0;
+}
+
+.winner-bar-you{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.winner-bar-lbl{
+  font-family:'Space Mono',monospace;
+  font-size:8px;font-weight:700;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:rgba(255,255,255,0.32);
+}
+
+.winner-bar-val{
+  font-family:'Syne',sans-serif;
+  font-size:14px;font-weight:800;
+  letter-spacing:-0.03em;
+}
+
+.winner-bar-sep{
+  width:1px;height:32px;
+  background:rgba(255,255,255,0.08);
+  margin:0 16px;
+  flex-shrink:0;
+}
+
+.winner-bar-winner{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.winner-bar-sub{
+  font-size:10px;
+  color:rgba(255,255,255,0.35);
+  font-family:'Instrument Sans',sans-serif;
+}
+
+/* ── DIAGNOSIS TEXT ── */
+.card-narrative{
+  position:relative;z-index:1;
+  font-family:'Instrument Sans',sans-serif;
+  font-size:11px;
+  line-height:1.55;
+  color:rgba(255,255,255,0.52);
+  border-left:2px solid var(--accent-color, #ff3232);
+  padding-left:10px;
+  max-width:92%;
+}
+
+/* ── CARD FOOTER ── */
+.card-footer{
+  position:relative;z-index:1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.card-footer-left{
+  display:flex;align-items:center;gap:10px;
+}
+
+.card-brand{
+  font-family:'Syne',sans-serif;
+  font-size:14px;font-weight:800;
+  letter-spacing:-0.04em;
+  color:#fff;
+  display:flex;align-items:center;gap:6px;
+}
+
+.card-brand-dot{
+  width:5px;height:5px;
+  border-radius:50%;
+  background:#3b82f6;
+}
+
+.card-wallet{
+  font-family:'Space Mono',monospace;
+  font-size:9px;
+  color:rgba(255,255,255,0.28);
+  letter-spacing:0.06em;
+}
+
+.card-footer-right{
+  font-family:'Space Mono',monospace;
+  font-size:9px;
+  color:rgba(255,255,255,0.22);
+  letter-spacing:0.06em;
+  text-align:right;
+}
+
+/* ════════════════════════════════════════
+   MODAL ACTIONS
+════════════════════════════════════════ */
+.modal-actions{
+  padding:0 24px 24px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+/* Primary action — share to X */
+.action-x{
+  width:100%;
+  height:48px;
+  background:#000;
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:10px;
+  color:#fff;
+  font-family:'Instrument Sans',sans-serif;
+  font-size:14px;font-weight:700;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:background .15s,border-color .15s;
+}
+.action-x:hover{background:#111;border-color:rgba(255,255,255,0.22)}
+
+/* Secondary row */
+.action-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+}
+
+.action-btn{
+  height:44px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.10);
+  background:rgba(255,255,255,0.04);
+  color:rgba(255,255,255,0.7);
+  font-family:'Instrument Sans',sans-serif;
+  font-size:13px;font-weight:600;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.action-btn:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2);color:#fff}
+
+.action-btn.solscan{
+  border-color:rgba(59,130,246,0.25);
+  color:#3b82f6;
+}
+.action-btn.solscan:hover{background:rgba(59,130,246,0.08)}
+
+/* Loading state */
+.action-btn.loading{opacity:0.5;cursor:wait}
+
+/* ── DEMO SWITCH ── */
+.demo-switch{
+  position:fixed;
+  bottom:24px;left:50%;
+  transform:translateX(-50%);
+  display:flex;gap:8px;
+  background:rgba(0,0,0,0.8);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:999px;
+  padding:6px 12px;
+}
+
+.demo-btn{
+  padding:6px 14px;
+  border-radius:999px;
+  font-size:11px;font-weight:700;
+  font-family:'Space Mono',monospace;
+  letter-spacing:0.08em;text-transform:uppercase;
+  cursor:pointer;border:none;background:transparent;
+  color:rgba(255,255,255,0.4);
+  transition:all .15s;
+}
+.demo-btn.active{
+  background:rgba(255,255,255,0.1);
+  color:#fff;
+}
+</style>
+</head>
+<body>
+
+<div class="modal-overlay">
+  <div class="modal-box">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-eyebrow">Share Payslip</div>
+      <button class="modal-close" onclick="this.closest('.modal-overlay').style.opacity=0">✕</button>
+    </div>
+
+    <!-- Card preview -->
+    <div class="card-wrap">
+      <div class="share-card" id="share-card"
+        style="--accent-color:#ff3232; --glow-color:rgba(255,50,50,0.18)">
+
+        <!-- Top row -->
+        <div class="card-top">
+          <div class="card-top-left">
+            <div class="card-slip-label">
+              <span class="card-slip-dot"></span>
+              SLIP · TRADE AUTOPSY
+            </div>
+            <div class="card-diagnosis" id="cd-diagnosis">BOUGHT THE TOP</div>
+            <div class="card-token-row">
+              <span class="card-symbol" id="cd-symbol">$BONK</span>
+              <span class="card-date" id="cd-date">Apr 14, 2026 · 09:42 UTC</span>
+            </div>
+          </div>
+
+          <div class="card-pnl-block">
+            <div class="card-pnl-label">Realized P&L</div>
+            <div class="card-pnl-value" id="cd-pnl" style="color:#ff3232">-14.2</div>
+            <div class="card-pnl-sol">SOL</div>
+          </div>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="card-stats">
+          <div class="card-stat">
+            <div class="card-stat-lbl">Entry Price</div>
+            <div class="card-stat-val" id="cd-entry">$0.0000185</div>
+          </div>
+          <div class="card-stat">
+            <div class="card-stat-lbl">Entry Percentile</div>
+            <div class="card-stat-val red" id="cd-pct">91st</div>
+          </div>
+          <div class="card-stat">
+            <div class="card-stat-lbl">Peak After Entry</div>
+            <div class="card-stat-val green" id="cd-peak">$0.0000190</div>
+          </div>
+          <div class="card-stat">
+            <div class="card-stat-lbl">Left on Table</div>
+            <div class="card-stat-val amber" id="cd-left">+17.4 SOL</div>
+          </div>
+        </div>
+
+        <!-- Winner comparison bar -->
+        <div class="card-winner-bar">
+          <div class="winner-bar-you">
+            <div class="winner-bar-lbl">You</div>
+            <div class="winner-bar-val" style="color:#ff3232" id="cd-you-pnl">-14.2 SOL</div>
+            <div class="winner-bar-sub" id="cd-you-entry">Entered $240k mcap</div>
+          </div>
+
+          <div class="winner-bar-sep"></div>
+
+          <div class="winner-bar-winner">
+            <div class="winner-bar-lbl" style="color:#10b981">Top Winner</div>
+            <div class="winner-bar-val" style="color:#10b981" id="cd-win-pnl">+214.8 SOL</div>
+            <div class="winner-bar-sub" id="cd-win-entry">Entered $41k · 2h 32m before you</div>
+          </div>
+        </div>
+
+        <!-- Narrative -->
+        <div class="card-narrative" id="cd-narrative">
+          Same token, same size. Winner entered 2h 32m before me at $41k mcap. By the time I entered at $240k, they were planning their exit. I was exit liquidity.
+        </div>
+
+        <!-- Footer -->
+        <div class="card-footer">
+          <div class="card-footer-left">
+            <div class="card-brand">
+              <div class="card-brand-dot"></div>
+              SLIP
+            </div>
+            <div class="card-wallet" id="cd-wallet">7xKXtg...sAsU</div>
+          </div>
+          <div class="card-footer-right" id="cd-url">slip.vercel.app</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="modal-actions">
+
+      <!-- Primary: Post to X -->
+      <button class="action-x" id="btn-x" onclick="shareX()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        Post to X
+      </button>
+
+      <!-- Secondary row -->
+      <div class="action-row">
+
+        <!-- Download JPEG -->
+        <button class="action-btn" id="btn-dl" onclick="downloadJpeg()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Save JPEG
+        </button>
+
+        <!-- Copy link -->
+        <button class="action-btn" id="btn-copy" onclick="copyLink()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+          <span id="copy-label">Copy Link</span>
+        </button>
+
+        <!-- View on Solscan -->
+        <button class="action-btn solscan" onclick="viewSolscan()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          Solscan ↗
+        </button>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Demo switcher — remove in real app -->
+<div class="demo-switch">
+  <button class="demo-btn active" onclick="setDiag('bought')">Bought Top</button>
+  <button class="demo-btn" onclick="setDiag('paper')">Paper Hands</button>
+  <button class="demo-btn" onclick="setDiag('sold')">Sold Bottom</button>
+  <button class="demo-btn" onclick="setDiag('good')">Good Trade</button>
+</div>
+
+<script>
+/* ── DEMO DATA ── */
+const DEMOS = {
+  bought: {
+    diagnosis: 'BOUGHT THE TOP',
+    symbol: '$BONK',
+    date: 'Apr 14, 2026 · 09:42 UTC',
+    pnl: '-14.2', pnlColor: '#ff3232',
+    entry: '$0.0000185',
+    pct: '91st', pctClass: 'red',
+    peak: '$0.0000190', peakClass: 'green',
+    left: '+17.4 SOL', leftClass: 'amber',
+    youPnl: '-14.2 SOL', youPnlColor: '#ff3232',
+    youEntry: 'Entered $240k mcap',
+    winPnl: '+214.8 SOL',
+    winEntry: 'Entered $41k · 2h 32m before you',
+    narrative: 'Same token, same size. Winner entered 2h 32m before me at $41k mcap. By the time I entered at $240k, they were planning their exit. I was exit liquidity.',
+    accent: '#ff3232', glow: 'rgba(255,50,50,0.18)',
+    sig: '5KJp3zN...tx8Qr',
+    wallet: '7xKXtg...sAsU',
+  },
+  paper: {
+    diagnosis: 'PAPER HANDS',
+    symbol: '$WIF',
+    date: 'Apr 11, 2026 · 14:17 UTC',
+    pnl: '+2.1', pnlColor: '#f59e0b',
+    entry: '$1.42',
+    pct: '34th', pctClass: 'green',
+    peak: '$2.34', peakClass: 'green',
+    left: '+10.7 SOL', leftClass: 'amber',
+    youPnl: '+2.1 SOL', youPnlColor: '#f59e0b',
+    youEntry: 'Exited at $1.61',
+    winPnl: '+88.3 SOL',
+    winEntry: 'Held to $2.30 — same entry as you',
+    narrative: 'Good entry — 34th percentile. But I exited at +13%. The winner held through 3 pullbacks to $2.30. My entry was right. My exit cost me 10.7 SOL.',
+    accent: '#f59e0b', glow: 'rgba(245,158,11,0.15)',
+    sig: '8mNx2pK...qZ3Wt',
+    wallet: '9mQZ...a1Wt',
+  },
+  sold: {
+    diagnosis: 'SOLD THE BOTTOM',
+    symbol: '$POPCAT',
+    date: 'Apr 09, 2026 · 22:05 UTC',
+    pnl: '-7.8', pnlColor: '#ff3232',
+    entry: '$0.0841',
+    pct: '58th', pctClass: '',
+    peak: '$0.1102', peakClass: 'green',
+    left: '+3.1 SOL', leftClass: 'amber',
+    youPnl: '-7.8 SOL', youPnlColor: '#ff3232',
+    youEntry: 'Sold at local low $0.0329',
+    winPnl: '+61.2 SOL',
+    winEntry: 'Held through — token recovered +234%',
+    narrative: 'Sold at the local low. Token recovered +234% after my exit. The winner took partials at the peak and held the rest. Timing hurt more than the thesis.',
+    accent: '#ff3232', glow: 'rgba(255,50,50,0.18)',
+    sig: '3tBv7hR...mK9Lp',
+    wallet: '3bNR...k9Vc',
+  },
+  good: {
+    diagnosis: 'GOOD TRADE',
+    symbol: '$JUP',
+    date: 'Apr 05, 2026 · 08:11 UTC',
+    pnl: '+5.3', pnlColor: '#10b981',
+    entry: '$0.00341',
+    pct: '28th', pctClass: 'green',
+    peak: '$0.00561', peakClass: 'green',
+    left: '+0.5 SOL', leftClass: 'green',
+    youPnl: '+5.3 SOL', youPnlColor: '#10b981',
+    youEntry: 'Entered $0.00341 · 28th pct',
+    winPnl: '+5.8 SOL',
+    winEntry: 'Similar entry — captured 91% of move',
+    narrative: 'Low entry percentile, clean hold, exited close to peak. Captured 91% of the available move. This is the template.',
+    accent: '#10b981', glow: 'rgba(16,185,129,0.15)',
+    sig: '2xQn8sM...vB4Yw',
+    wallet: 'DmNk...p9Xc',
+  },
+};
+
+let currentSig = '5KJp3zN...tx8Qr';
+
+function setDiag(key) {
+  const d = DEMOS[key];
+  const card = document.getElementById('share-card');
+
+  card.style.setProperty('--accent-color', d.accent);
+  card.style.setProperty('--glow-color', d.glow);
+
+  document.getElementById('cd-diagnosis').textContent = d.diagnosis;
+  document.getElementById('cd-diagnosis').style.color = d.accent;
+  document.getElementById('cd-symbol').textContent = d.symbol;
+  document.getElementById('cd-date').textContent = d.date;
+  document.getElementById('cd-pnl').textContent = d.pnl;
+  document.getElementById('cd-pnl').style.color = d.pnlColor;
+  document.getElementById('cd-entry').textContent = d.entry;
+  document.getElementById('cd-pct').textContent = d.pct;
+  document.getElementById('cd-pct').className = `card-stat-val ${d.pctClass}`;
+  document.getElementById('cd-peak').textContent = d.peak;
+  document.getElementById('cd-left').textContent = d.left;
+  document.getElementById('cd-left').className = `card-stat-val ${d.leftClass}`;
+  document.getElementById('cd-you-pnl').textContent = d.youPnl;
+  document.getElementById('cd-you-pnl').style.color = d.youPnlColor;
+  document.getElementById('cd-you-entry').textContent = d.youEntry;
+  document.getElementById('cd-win-pnl').textContent = d.winPnl;
+  document.getElementById('cd-win-entry').textContent = d.winEntry;
+  document.getElementById('cd-narrative').textContent = d.narrative;
+  document.getElementById('cd-wallet').textContent = d.wallet;
+
+  currentSig = d.sig;
+
+  // Update narrative border color
+  document.getElementById('cd-narrative').style.borderLeftColor = d.accent;
+
+  // Update demo tab
+  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+/* ── ACTIONS ── */
+function shareX() {
+  const diag = document.getElementById('cd-diagnosis').textContent;
+  const sym  = document.getElementById('cd-symbol').textContent;
+  const pnl  = document.getElementById('cd-pnl').textContent + ' SOL';
+  const text = encodeURIComponent(
+    `Just ran my trades through SLIP 🔍\n\n` +
+    `${sym}: ${diag} — ${pnl}\n\n` +
+    `The tool shows exactly who won your money and why.\n\n` +
+    `slip.vercel.app\n\n` +
+    `#Solana #OnchainTrading`
+  );
+  window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+}
+
+async function downloadJpeg() {
+  const btn = document.getElementById('btn-dl');
+  btn.classList.add('loading');
+  btn.textContent = 'Saving...';
+
+  try {
+    // In real app: uses html-to-image
+    // Here: shows feedback then resets
+    await new Promise(r => setTimeout(r, 800));
+    btn.textContent = '✓ Saved';
+    setTimeout(() => {
+      btn.classList.remove('loading');
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Save JPEG`;
+    }, 1600);
+  } catch(e) {
+    btn.classList.remove('loading');
+    btn.innerHTML = 'Save JPEG';
+  }
+}
+
+function copyLink() {
+  const url = 'https://slip.vercel.app';
+  navigator.clipboard?.writeText(url).catch(() => {});
+  const lbl = document.getElementById('copy-label');
+  lbl.textContent = 'Copied!';
+  setTimeout(() => { lbl.textContent = 'Copy Link'; }, 1800);
+}
+
+function viewSolscan() {
+  window.open(`https://solscan.io/tx/${currentSig}`, '_blank');
+}
+</script>
+</body>
+</html>

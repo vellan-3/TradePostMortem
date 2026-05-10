@@ -1,21 +1,8 @@
 import { useState } from 'react';
+import ShareModal from './ShareModal';
 
 export default function TradeCard({ trade, rank, isOpen, onToggle, onVerdict, onMirror }: any) {
-  const [copied, setCopied] = useState(false);
-
-  const handleShare = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const tweetText = `I just got my $${trade.tokenSymbol} payslip on SLIP!
-
-📉 My P&L: ${trade.pnlSol >= 0 ? '+' : ''}${trade.pnlSol.toFixed(1)} SOL
-🏆 Top Winner: ${trade.topWinner ? `+${trade.topWinner.totalPnlSol.toFixed(1)} SOL` : 'N/A'}
-
-Analyze your trades at:`;
+  const [showShareModal, setShowShareModal] = useState(false);
   return (
     <div className={`ds-trade-card ${isOpen ? 'ds-trade-card-open' : ''}`}>
       <div className="ds-tc-top" onClick={onToggle}>
@@ -102,18 +89,19 @@ Analyze your trades at:`;
               <button className="ds-btn-tertiary" onClick={() => onMirror(trade.tokenSymbol, trade.tokenMint)}>🪞 FULL MIRROR →</button>
             </div>
             <div className="ds-tc-actions-right">
-              <button 
-                className="ds-btn-tertiary" 
-                onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(window.location.href)}`, '_blank')}
-              >
-                𝕏 POST
-              </button>
-              <button className="ds-btn-tertiary" onClick={handleShare}>
-                {copied ? '✓ COPIED!' : 'SHARE PAYSLIP'}
+              <button className="ds-btn-tertiary" onClick={() => setShowShareModal(true)}>
+                SHARE PAYSLIP
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {showShareModal && (
+        <ShareModal 
+          trade={trade} 
+          onClose={() => setShowShareModal(false)} 
+        />
       )}
     </div>
   );
